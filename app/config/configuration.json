@@ -1,0 +1,8 @@
+{
+  "serviceName": "RRP Cloud Connector Service",
+  "loggingLevel": "debug",
+  "telemetryEndpoint": "",
+  "telemetryDataStoreName": "",
+  "httpsProxyURL": "http://proxy-us.intel.com:912",
+  "port": "8080"
+}

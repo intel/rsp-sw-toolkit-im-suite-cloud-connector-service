@@ -1,0 +1,34 @@
+version: 0.1
+            
+phases:
+
+  install: 
+    commands:
+
+  pre_build: 
+    commands:
+   
+    # Make the required folder with proper name for this service
+    - mkdir -p $RRP_HOME/cloud-connector-service
+
+    # copy all files to folder with the proper name, but leave originals here for use later in docker image step
+    - cp -r * $RRP_HOME/cloud-connector-service
+
+    # Start Mongo BD in background which is needed by the unit tests
+    - mongod &
+
+    # Run all the unit tests
+    - cd $RRP_HOME/cloud-connector-service; go test -cover -v $(go list ./... | grep -v /vendor/)
+
+    # Run Gometalinter
+    - cd $RRP_HOME/cloud-connector-service; gometalinter.v2 --vendor --deadline=120s --disable gotype --config=/home/linter.json ./...
+  build:
+    commands:
+    # Build our application from the proper folder structure and place executable in current directory for building the docker image
+    - cd $RRP_HOME/cloud-connector-service; CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ./cloud-connector-service .
+    - cp $RRP_HOME/cloud-connector-service/cloud-connector-service .
+
+artifacts:
+  files: 
+  - Dockerfile.release
+  - cloud-connector-service
