@@ -73,14 +73,18 @@ func NewRouter() *mux.Router {
 		//
 		// This API call is used to request Responsive Retail to notify the enterprise system when specific events occur in the store. The notifications take place by a web callback, typically referred to as a web hook. A notification request must include the following information:
 		//
-		//     URL - The call back URL. Responsive Retail must be able to post data to this URL.
+		//     URL - (required) The call back URL. Responsive Retail must be able to post data to this URL.
 		//
-		//     Auth - Authentication settings used
+		//	   Method - (required) The http method to be ran on the webhook
+		//
+		//	   Header - (optional) The header for the webhook
+		//
+		//     Auth - (optional) Authentication settings used
 		//       - AuthType - The Authentication method defined by the webhook (ex. OAuth2)
 		//       - Endpoint - The Authentication endpoint if it differs from the webhook server
 		//       - Data - The Authentication data required by the authentication server
 		//
-		//     Payload - The payload intended for the destination webhook. This is typically a json object or map of values.
+		//     Payload - (optional) The payload intended for the destination webhook. This is typically a json object or map of values.
 		//
 		//     Expected formatting of JSON input (as an example):<br><br>
 		//
@@ -129,15 +133,15 @@ func NewRouter() *mux.Router {
 		//
 		// This API call is used to upload data to an S3 bucket by passing the access key id, secret access key, region, and bucket name in the request along with the payload.
 		//
-		//     AccessKeyID - AWS access key ID
+		//     AccessKeyID - (required) AWS access key ID
 		//
-		//     SecretAccessKey - AWS secret access key
+		//     SecretAccessKey - (required) AWS secret access key
 		//
-		//     Region - AWS Region
+		//     Region - (required) AWS Region
 		//
-		//	   Bucket - The bucket path/name
+		//	   Bucket - (required) The bucket path/name
 		//
-		//     Payload - The payload intended for the destination. This is typically a json object or map of values.
+		//     Payload - (optional) The payload intended for the destination. This is typically a json object or map of values.
 		//
 		//     Expected formatting of JSON input (as an example):<br><br>
 		//

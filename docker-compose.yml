@@ -1,0 +1,18 @@
+version: "3"
+services:
+  cloud-connector-service:
+    image: cloudconnector
+    logging:
+      options:
+        max-size: "1000m"
+        max-file: "5"
+    environment:
+      serviceName: "RRP Notification Service"
+      loggingLevel: "debug"
+      telemetryEndpoint: ""
+      telemetryDataStoreName: ""
+      httpsProxyURL: "http://proxy-us.intel.com:912"
+      port: "8080"
+    ports:
+      - 8083:8080
+    restart: always
