@@ -37,6 +37,7 @@ import (
 	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/pkg/web"
 	metrics "github.impcloud.net/Responsive-Retail-Inventory/utilities/go-metrics"
 	"github.impcloud.net/Responsive-Retail-Inventory/utilities/gojsonschema"
+	"github.impcloud.net/Responsive-Retail-Inventory/utilities/helper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -247,7 +248,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 
 func s3AddDataToBucket(s3Client *s3.S3, bucketName string, data []byte) error {
 
-	objectName := fmt.Sprintf("awsfile_%v", time.Now().Unix())
+	objectName := fmt.Sprintf("awsfile_%v", helper.UnixMilliNow())
 
 	bucketExists := s3BucketExists(s3Client, bucketName)
 
