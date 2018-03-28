@@ -1,5 +1,6 @@
 rrpBuildGoCode {
     projectKey = 'cloud-connector-service'
     testDependencies = ['mongo']
-    imageTags = ['go-latest']
+    
+    ecrRegistry = "280211473891.dkr.ecr.us-west-2.amazonaws.com"
 }
