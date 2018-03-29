@@ -90,8 +90,8 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 
 	startTime := time.Now()
 	defer metrics.GetOrRegisterTimer("CloudConnector.notifywebhook.Latency", nil).Update(time.Since(startTime))
-	mSuccess := metrics.GetOrRegisterGauge("CloudConnector.notifywebhook.Success", nil)
-	mError := metrics.GetOrRegisterGauge("CloudConnector.notifywebhook.Error", nil)
+	mSuccess := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Success", nil)
+	mError := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Error", nil)
 	var code = http.StatusOK
 	webHookErrChan := make(chan error)
 	var webHookObj cloudConnector.Webhook
@@ -137,15 +137,16 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 			}).Error(err.Error())
 
 			webHookErrChan <- err
-			mError.Update(1)
+			mError.Add(1)
 		} else {
 			log.WithFields(log.Fields{
 				"Method":     "ProcessWebhook",
 				"TraceID":    traceID,
 				"webhookURL": webHookObj.URL,
 			}).Info("Successful!")
+
 			webHookErrChan <- nil
-			mSuccess.Update(1)
+			mSuccess.Add(1)
 		}
 	}()
 

@@ -43,7 +43,7 @@
     "databaseName": "location?authSource=admin",
     "reloadRulesEndpoint": "/reloadrules"
   },
-  "cloud-connector-service" : {
+  "notification-service" : {
     "serviceName": "RRP Notification Service",
     "httpsProxyURL": "http://proxy-us.intel.com:912"
   },
