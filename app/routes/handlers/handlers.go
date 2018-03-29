@@ -93,7 +93,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 	mSuccess := metrics.GetOrRegisterGauge("CloudConnector.notifywebhook.Success", nil)
 	mError := metrics.GetOrRegisterGauge("CloudConnector.notifywebhook.Error", nil)
 	var code = http.StatusOK
-
+	webHookErrChan := make(chan error)
 	var webHookObj cloudConnector.Webhook
 
 	validationErrors, marshalError := unmarshalRequestBody(writer, request, &webHookObj, cloudConnector.WebhookSchema)
@@ -136,6 +136,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 				"TraceID":     traceID,
 			}).Error(err.Error())
 
+			webHookErrChan <- err
 			mError.Update(1)
 		} else {
 			log.WithFields(log.Fields{
@@ -143,14 +144,19 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 				"TraceID":    traceID,
 				"webhookURL": webHookObj.URL,
 			}).Info("Successful!")
-
+			webHookErrChan <- nil
 			mSuccess.Update(1)
 		}
 	}()
 
-	web.Respond(ctx, writer, nil, code)
+	webHookErr := <-webHookErrChan
+	if webHookErr != nil {
+		code = 400
+	}
 
-	return nil
+	web.Respond(ctx, writer, webHookErr, code)
+
+	return webHookErr
 }
 
 // AwsCloud triggers a set of rules based on the user input
