@@ -118,6 +118,10 @@ func NewRouter() *mux.Router {
 		//        type: array
 		//        items:
 		//         "$ref": "#/definitions/ErrReport"
+		//   '404':
+		//      description: endpoint not found
+		//      schema:
+		//        type: error
 		//   '500':
 		//      description: Internal server error
 		//

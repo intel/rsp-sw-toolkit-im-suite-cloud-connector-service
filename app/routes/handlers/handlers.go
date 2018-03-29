@@ -80,7 +80,7 @@ func (connector *CloudConnector) Index(ctx context.Context, writer http.Response
 }
 
 // CallWebhook
-// 200 OK, 400 Bad Request, 500 Internal Error
+// 200 OK, 400 Bad Request, 404 endpoint not found, 500 Internal Error
 func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.ResponseWriter, request *http.Request) error {
 
 	traceID := ctx.Value(web.KeyValues).(*web.ContextValues).TraceID
@@ -151,7 +151,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 
 	webHookErr := <-webHookErrChan
 	if webHookErr != nil {
-		code = 400
+		code = http.StatusNotFound
 	}
 
 	web.Respond(ctx, writer, webHookErr, code)
