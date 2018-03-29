@@ -80,7 +80,7 @@ func (connector *CloudConnector) Index(ctx context.Context, writer http.Response
 }
 
 // CallWebhook
-// 200 OK, 400 Bad Request, 500 Internal Error
+// 200 OK, 400 Bad Request, 404 endpoint not found, 500 Internal Error
 func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.ResponseWriter, request *http.Request) error {
 
 	traceID := ctx.Value(web.KeyValues).(*web.ContextValues).TraceID
@@ -93,7 +93,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 	mSuccess := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Success", nil)
 	mError := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Error", nil)
 	var code = http.StatusOK
-
+	webHookErrChan := make(chan error)
 	var webHookObj cloudConnector.Webhook
 
 	validationErrors, marshalError := unmarshalRequestBody(writer, request, &webHookObj, cloudConnector.WebhookSchema)
@@ -136,6 +136,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 				"TraceID":     traceID,
 			}).Error(err.Error())
 
+			webHookErrChan <- err
 			mError.Add(1)
 		} else {
 			log.WithFields(log.Fields{
@@ -144,13 +145,19 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 				"webhookURL": webHookObj.URL,
 			}).Info("Successful!")
 
+			webHookErrChan <- nil
 			mSuccess.Add(1)
 		}
 	}()
 
-	web.Respond(ctx, writer, nil, code)
+	webHookErr := <-webHookErrChan
+	if webHookErr != nil {
+		code = http.StatusNotFound
+	}
 
-	return nil
+	web.Respond(ctx, writer, webHookErr, code)
+
+	return webHookErr
 }
 
 // AwsCloud triggers a set of rules based on the user input

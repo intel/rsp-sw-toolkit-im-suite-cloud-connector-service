@@ -92,8 +92,8 @@ func TestCallWebhook(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusOK {
-		t.Errorf("Success expected 200 but returned: %d", recorder.Code)
+	if recorder.Code != http.StatusNotFound {
+		t.Errorf("Expected to fail with 404 but returned: %d", recorder.Code)
 	}
 }
 
@@ -143,10 +143,7 @@ func TestCallWebhookInvalidJson(t *testing.T) {
 			// request int in string slice
 			input: []byte(`{
 				"url":"http://localhost/test",
-				"method": "",
-				"header": {
-					"thing1": [1]
-				},
+				"method": "post",
 				"auth" : {
 					"authtype" : "oauth2",
 					"endpoint" : "http://localhost/testServerURL/oauth",
@@ -207,7 +204,6 @@ func TestCallWebhookSchemaFailed(t *testing.T) {
 	handler := web.Handler(cloudConnector.CallWebhook)
 
 	testHandlerHelper(invalidJSONSample, handler, t)
-
 }
 
 func TestAwsCloudCallInvalidJsonInput(t *testing.T) {

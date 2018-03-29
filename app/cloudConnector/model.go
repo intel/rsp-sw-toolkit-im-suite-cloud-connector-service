@@ -107,9 +107,8 @@ const WebhookSchema = `
 								]
 							},
 							"method": {
-								"type": "string",
-								"minLength": 3,
-								"maxLength": 6
+								"type": ["string", "null"],
+								"enum": ["POST", "GET", "PUT", "PATCH", "DELETE", null]
 							}
 					},
 					"additionalProperties": false,
