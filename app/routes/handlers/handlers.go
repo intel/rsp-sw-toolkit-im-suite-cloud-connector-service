@@ -150,7 +150,9 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 			"TraceID":     traceID,
 		}).Error(err.Error())
 
-		web.Respond(ctx, writer, err, http.StatusNotFound)
+		if !webHookObj.IsAsync {
+			web.Respond(ctx, writer, err, http.StatusNotFound)
+		}
 		mError.Update(1)
 	} else {
 		log.WithFields(log.Fields{
@@ -158,7 +160,10 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 			"TraceID":    traceID,
 			"webhookURL": webHookObj.URL,
 		}).Info("Successful!")
-		web.Respond(ctx, writer, nil, http.StatusOK)
+
+		if !webHookObj.IsAsync {
+			web.Respond(ctx, writer, nil, http.StatusOK)
+		}
 		mSuccess.Update(1)
 	}
 }
