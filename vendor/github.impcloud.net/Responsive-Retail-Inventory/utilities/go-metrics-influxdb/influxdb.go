@@ -133,6 +133,22 @@ func (r *reporter) send() error {
 				metric.Clear()
 			}
 
+		case metrics.GaugeCollection:
+			ms := metric.Snapshot()
+			if ms.IsSet() {
+				for _, reading := range ms.Readings() {
+					pts = append(pts, client.Point{
+						Measurement: fmt.Sprintf("%s.gauge", name), // individual points remain as a "gauge"
+						Tags:        r.tags,
+						Fields: map[string]interface{}{
+							"value": reading.Reading,
+						},
+						Time: reading.Time,
+					})
+				}
+				metric.Clear()
+			}
+
 		case metrics.Histogram:
 			ms := metric.Snapshot()
 			ps := ms.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999})

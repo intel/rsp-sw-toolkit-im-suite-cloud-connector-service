@@ -90,6 +90,13 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 
 	startTime := time.Now()
 	defer metrics.GetOrRegisterTimer("CloudConnector.notifywebhook.Latency", nil).Update(time.Since(startTime))
+<<<<<<< HEAD
+=======
+	mSuccess := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Success", nil)
+	mError := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Error", nil)
+	var code = http.StatusOK
+	webHookErrChan := make(chan error)
+>>>>>>> ef5bd3c09dc21546d059faa55d9e79f690a5413b
 	var webHookObj cloudConnector.Webhook
 
 	validationErrors, marshalError := unmarshalRequestBody(writer, request, &webHookObj, cloudConnector.WebhookSchema)
@@ -123,10 +130,39 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 		return nil
 	}
 
+<<<<<<< HEAD
 	if webHookObj.IsAsync {
 		go cloudCall(ctx, writer, webHookObj)
 	} else {
 		cloudCall(ctx, writer, webHookObj)
+=======
+	go func() {
+		if err := cloudConnector.ProcessWebhook(webHookObj, config.AppConfig.HttpsProxyURL); err != nil {
+			log.WithFields(log.Fields{
+				"Method":      "CallWebhook",
+				"Action":      "process the webhook request",
+				"Webhook URL": webHookObj.URL,
+				"TraceID":     traceID,
+			}).Error(err.Error())
+
+			webHookErrChan <- err
+			mError.Add(1)
+		} else {
+			log.WithFields(log.Fields{
+				"Method":     "ProcessWebhook",
+				"TraceID":    traceID,
+				"webhookURL": webHookObj.URL,
+			}).Info("Successful!")
+
+			webHookErrChan <- nil
+			mSuccess.Add(1)
+		}
+	}()
+
+	webHookErr := <-webHookErrChan
+	if webHookErr != nil {
+		code = http.StatusNotFound
+>>>>>>> ef5bd3c09dc21546d059faa55d9e79f690a5413b
 	}
 
 	return nil
