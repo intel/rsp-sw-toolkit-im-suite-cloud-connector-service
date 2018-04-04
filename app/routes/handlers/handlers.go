@@ -124,6 +124,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 	}
 
 	if webHookObj.IsAsync {
+		web.Respond(ctx, writer, nil, http.StatusOK)
 		go cloudCall(ctx, writer, webHookObj)
 	} else {
 		cloudCall(ctx, writer, webHookObj)
