@@ -7,7 +7,7 @@ services:
         max-size: "1000m"
         max-file: "5"
     environment:
-      serviceName: "RRP Notification Service"
+      serviceName: "RRP Cloud Connector Service"
       loggingLevel: "debug"
       telemetryEndpoint: ""
       telemetryDataStoreName: ""
