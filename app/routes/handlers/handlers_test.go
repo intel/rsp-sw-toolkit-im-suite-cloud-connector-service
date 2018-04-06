@@ -74,6 +74,40 @@ func TestCallWebhook(t *testing.T) {
 			AuthType: "oauth2",
 			Endpoint: "http://localhost/testServerURL/oauth",
 			Data:     "testname:testpassword"},
+		IsAsync: true,
+		Payload: []byte{}}
+	mData, marshalErr := json.Marshal(data)
+	if marshalErr != nil {
+		t.Errorf("Unable to marshal data: %s", marshalErr.Error())
+	}
+	request, err := http.NewRequest("POST", "/callwebhook'", bytes.NewBuffer(mData))
+	if err != nil {
+		t.Errorf("Unable to create new HTTP Request: %s", err.Error())
+	}
+
+	recorder := httptest.NewRecorder()
+
+	cloudConnector := CloudConnector{}
+
+	handler := web.Handler(cloudConnector.CallWebhook)
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Errorf("Expected pass with 200 but returned: %d", recorder.Code)
+	}
+}
+
+func TestCallWebhookNotAsync(t *testing.T) {
+
+	data := cloudConnector.Webhook{
+		URL:    "http://localhost/test",
+		Method: "POST",
+		Auth: cloudConnector.Auth{
+			AuthType: "oauth2",
+			Endpoint: "http://localhost/testServerURL/oauth",
+			Data:     "testname:testpassword"},
+		IsAsync: false,
 		Payload: []byte{}}
 	mData, marshalErr := json.Marshal(data)
 	if marshalErr != nil {
@@ -118,7 +152,8 @@ func TestCallWebhookInvalidJson(t *testing.T) {
 					"endpoint" : "http://localhost/testServerURL/oauth",
 					"data" :     "testname:testpassword"
 				},
-				"payload": "test string"
+				"payload": "test string",
+				"isasync":true
 		}`),
 			code: 500,
 		},
@@ -135,7 +170,8 @@ func TestCallWebhookInvalidJson(t *testing.T) {
 					"endpoint" : "http://localhost/testServerURL/oauth",
 					"data" :     "testname:testpassword"
 				},
-				"payload": "test string"
+				"payload": "test string",
+				"isasync":true
 		}`),
 			code: 500,
 		},
@@ -149,7 +185,8 @@ func TestCallWebhookInvalidJson(t *testing.T) {
 					"endpoint" : "http://localhost/testServerURL/oauth",
 					"data" :     "testname:testpassword"
 				},
-				"payload": "test string"
+				"payload": "test string",
+				"isasync":true
 		}`),
 			code: 400,
 		},
@@ -175,6 +212,7 @@ func TestCallWebhookSchemaFailed(t *testing.T) {
 							"endpoint":"localhost/test",
 							"data":"testname:testpassword"
 						},
+						"isasync":true,
 					"payload": ""
 					}`),
 			code: 400,
@@ -188,6 +226,7 @@ func TestCallWebhookSchemaFailed(t *testing.T) {
 						"endpoint":"http://local/oauth",
 						"data":123
 					},
+					"isasync":true,
 				"payload": 123
 				}`),
 			code: 400,

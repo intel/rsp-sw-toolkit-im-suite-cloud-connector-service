@@ -90,10 +90,6 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 
 	startTime := time.Now()
 	defer metrics.GetOrRegisterTimer("CloudConnector.notifywebhook.Latency", nil).Update(time.Since(startTime))
-	mSuccess := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Success", nil)
-	mError := metrics.GetOrRegisterGaugeCollection("CloudConnector.notifywebhook.Error", nil)
-	var code = http.StatusOK
-	webHookErrChan := make(chan error)
 	var webHookObj cloudConnector.Webhook
 
 	validationErrors, marshalError := unmarshalRequestBody(writer, request, &webHookObj, cloudConnector.WebhookSchema)
@@ -127,37 +123,49 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 		return nil
 	}
 
-	go func() {
-		if err := cloudConnector.ProcessWebhook(webHookObj, config.AppConfig.HttpsProxyURL); err != nil {
-			log.WithFields(log.Fields{
-				"Method":      "CallWebhook",
-				"Action":      "process the webhook request",
-				"Webhook URL": webHookObj.URL,
-				"TraceID":     traceID,
-			}).Error(err.Error())
+	if webHookObj.IsAsync {
+		go cloudCall(ctx, writer, webHookObj)
+		web.Respond(ctx, writer, nil, http.StatusOK)
 
-			webHookErrChan <- err
-			mError.Add(1)
-		} else {
-			log.WithFields(log.Fields{
-				"Method":     "ProcessWebhook",
-				"TraceID":    traceID,
-				"webhookURL": webHookObj.URL,
-			}).Info("Successful!")
-
-			webHookErrChan <- nil
-			mSuccess.Add(1)
-		}
-	}()
-
-	webHookErr := <-webHookErrChan
-	if webHookErr != nil {
-		code = http.StatusNotFound
+	} else {
+		cloudCall(ctx, writer, webHookObj)
 	}
 
-	web.Respond(ctx, writer, webHookErr, code)
+	return nil
+}
 
-	return webHookErr
+func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloudConnector.Webhook) {
+
+	traceID := ctx.Value(web.KeyValues).(*web.ContextValues).TraceID
+	startTime := time.Now()
+	defer metrics.GetOrRegisterTimer("CloudConnector.syncCloudCall.Latency", nil).Update(time.Since(startTime))
+	mSuccess := metrics.GetOrRegisterGauge("CloudConnector.syncCloudCall.Success", nil)
+	mError := metrics.GetOrRegisterGauge("CloudConnector.syncCloudCall.Error", nil)
+
+	if err := cloudConnector.ProcessWebhook(webHookObj, config.AppConfig.HttpsProxyURL); err != nil {
+		log.WithFields(log.Fields{
+			"Method":      "CallWebhook",
+			"Action":      "process the webhook request",
+			"Webhook URL": webHookObj.URL,
+			"TraceID":     traceID,
+		}).Error(err.Error())
+
+		if !webHookObj.IsAsync {
+			web.Respond(ctx, writer, err, http.StatusNotFound)
+		}
+		mError.Update(1)
+	} else {
+		log.WithFields(log.Fields{
+			"Method":     "ProcessWebhook",
+			"TraceID":    traceID,
+			"webhookURL": webHookObj.URL,
+		}).Info("Successful!")
+
+		if !webHookObj.IsAsync {
+			web.Respond(ctx, writer, nil, http.StatusOK)
+		}
+		mSuccess.Update(1)
+	}
 }
 
 // AwsCloud triggers a set of rules based on the user input

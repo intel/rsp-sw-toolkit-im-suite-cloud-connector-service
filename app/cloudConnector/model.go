@@ -37,6 +37,7 @@ type Webhook struct {
 	URL     string      `json:"url" valid:"required,url"`
 	Auth    Auth        `json:"auth" valid:"optional"`
 	Payload interface{} `json:"payload" valid:"optional"`
+	IsAsync bool        `json:"isasync" valid:"required"`
 }
 
 // Auth contains the type and the endpoint of authentication
@@ -109,6 +110,9 @@ const WebhookSchema = `
 							"method": {
 								"type": ["string", "null"],
 								"enum": ["POST", "GET", "PUT", "PATCH", "DELETE", null]
+							},
+							"isasync": {
+								"type": "boolean"
 							}
 					},
 					"additionalProperties": false,

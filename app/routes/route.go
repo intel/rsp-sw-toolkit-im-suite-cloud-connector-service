@@ -79,6 +79,8 @@ func NewRouter() *mux.Router {
 		//
 		//	   Header - (optional) The header for the webhook
 		//
+		//	   IsAsync - (required) Whether the cloud call should be made sync or async.  To be notified of errors connecting to the cloud use IsAsync:true.
+		//
 		//     Auth - (optional) Authentication settings used
 		//       - AuthType - The Authentication method defined by the webhook (ex. OAuth2)
 		//       - Endpoint - The Authentication endpoint if it differs from the webhook server
@@ -96,6 +98,7 @@ func NewRouter() *mux.Router {
 		// 		"endpoint": "string",
 		// 		"data":     "string"
 		// 	},
+		// 	"isasync": 		boolean,
 		// 	"payload": "interface"
 		//  }
 		//  ```
@@ -119,9 +122,7 @@ func NewRouter() *mux.Router {
 		//        items:
 		//         "$ref": "#/definitions/ErrReport"
 		//   '404':
-		//      description: endpoint not found
-		//      schema:
-		//        type: error
+		//      description: Not Found
 		//   '500':
 		//      description: Internal server error
 		//
