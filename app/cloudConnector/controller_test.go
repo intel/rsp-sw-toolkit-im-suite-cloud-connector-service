@@ -26,7 +26,7 @@ import (
 	"os"
 	"testing"
 
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/config"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
 )
 
 func GenerateWebhook(testServerURL string, auth bool) Webhook {

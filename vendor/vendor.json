@@ -187,8 +187,8 @@
 		},
 		{
 			"checksumSHA1": "55bIM93YCsoJ1vi3aBiShAE6jwk=",
-			"origin": "github.impcloud.net/Responsive-Retail-Inventory/utilities.git",
-			"path": "github.impcloud.net/Responsive-Retail-Inventory/utilities",
+			"origin": "github.impcloud.net/Responsive-Retail-Core/utilities.git",
+			"path": "github.impcloud.net/Responsive-Retail-Core/utilities",
 			"revision": "da4ba9fdb7d83e5b7c2aa7c25759a14cfb10aec1",
 			"revisionTime": "2018-03-28T23:15:46Z",
 			"tree": true
@@ -200,5 +200,5 @@
 			"revisionTime": "2017-06-14T06:48:48Z"
 		}
 	],
-	"rootPath": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service"
+	"rootPath": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service"
 }

@@ -28,9 +28,9 @@ import (
 	"os"
 	"testing"
 
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/cloudConnector"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/config"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/pkg/web"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/web"
 )
 
 type inputTest struct {

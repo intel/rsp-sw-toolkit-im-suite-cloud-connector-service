@@ -3,9 +3,9 @@ Reuseable Go utilities used by other projects
 
 MUST DO: 
 If you make changes to this service you must update the template and any micro-services that requrie your changes to use the latest version of this package.
-You do this by removing the folder 'vendor/github.impcloud.net/Responsive-Retail-Inventory/utilities/' from all micro-services and run 'govendor fetch -tree github.impcloud.net/Responsive-Retail-Inventory/utilities/^::github.impcloud.net/Responsive-Retail-Inventory/utilities.git' on every service.
+You do this by removing the folder 'vendor/github.impcloud.net/Responsive-Retail-Core/utilities/' from all micro-services and run 'govendor fetch -tree github.impcloud.net/Responsive-Retail-Core/utilities/^::github.impcloud.net/Responsive-Retail-Core/utilities.git' on every service.
 
-Clone to your GOPATH/src/github.impcloud.net/Responsive-Retail-Inventory folder. This is a must so import statements are correct and consistent across RRP projects.
+Clone to your GOPATH/src/github.impcloud.net/Responsive-Retail-Core folder. This is a must so import statements are correct and consistent across RRP projects.
 
 We will be using GoVendor to manage dependecies. GoVendor manages the projects dependencies locally in the vendor folder and tracks them via the vendor/vendor.json file.
 

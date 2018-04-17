@@ -10,11 +10,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/config"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/routes"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/pkg/healthcheck"
-	metrics "github.impcloud.net/Responsive-Retail-Inventory/utilities/go-metrics"
-	reporter "github.impcloud.net/Responsive-Retail-Inventory/utilities/go-metrics-influxdb"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/healthcheck"
+	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
+	reporter "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics-influxdb"
 )
 
 func main() {

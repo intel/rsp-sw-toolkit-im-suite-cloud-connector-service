@@ -27,7 +27,7 @@ import (
 	"runtime/debug"
 
 	log "github.com/sirupsen/logrus"
-	"github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/pkg/web"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/web"
 )
 
 // Recover middleware

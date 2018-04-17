@@ -149,12 +149,12 @@
           "x-go-name": "Endpoint"
         }
       },
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/cloudConnector"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
     },
     "CloudConnector": {
       "type": "object",
       "title": "CloudConnector represents the User API method handler set.",
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/routes/handlers"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes/handlers"
     },
     "ErrReport": {
       "description": "ErrReport is used to wrap schema validation errors int json object",
@@ -177,7 +177,7 @@
           "x-go-name": "Value"
         }
       },
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/routes/handlers"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes/handlers"
     },
     "ErrorList": {
       "description": "ErrorList provides a collection of errors for processing",
@@ -192,7 +192,7 @@
           "x-go-name": "Errors"
         }
       },
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/routes/handlers"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes/handlers"
     },
     "Header": {
       "type": "object",
@@ -232,7 +232,7 @@
           "x-go-name": "URL"
         }
       },
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/cloudConnector"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
     },
     "resultsResponse": {
       "description": "Response wraps results, inlinecount, and extra fields in a json object",
@@ -249,7 +249,7 @@
         }
       },
       "x-go-name": "Response",
-      "x-go-package": "github.impcloud.net/Responsive-Retail-Inventory/cloud-connector-service/app/routes/handlers"
+      "x-go-package": "github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes/handlers"
     }
   },
   "responses": {
