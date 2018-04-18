@@ -59,5 +59,6 @@ import (
 // swagger:parameters callwebhook
 type WebhookWrapper struct {
 	//in: body
+
 	WebhookObj cloudConnector.Webhook `json:"webhook"`
 }
