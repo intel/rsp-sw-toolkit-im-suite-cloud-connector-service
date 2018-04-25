@@ -253,7 +253,7 @@ func TestOAuth2PostWebhookNoAuthenticationForbidden(t *testing.T) {
 	}
 }
 
-func TestPostWebhookNoAuthenticationProxy(t *testing.T) {
+func TestPostWebhookProxy(t *testing.T) {
 	testURL := "testURL.com"
 	webHook := GenerateWebhook(testURL, false)
 	data := []byte(`{ }`)
