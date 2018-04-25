@@ -191,7 +191,7 @@ func postWebhookAccessToken(data []byte, URL string, tokenType string, accessTok
 	return nil
 }
 
-// postWebhook post to webhook with no authentication
+// postWebhook post to webhook
 func postWebhook(webh Webhook, proxy string) error {
 	metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Attempt`, nil).Update(1)
 	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Success`, nil)
