@@ -52,7 +52,7 @@ func ProcessWebhook(webh Webhook, proxy string) error {
 	case oauth2:
 		postErr = postOAuth2Webhook(webh, proxy)
 	default:
-		postErr = postWebhookNoAuthentication(webh, proxy)
+		postErr = postWebhook(webh, proxy)
 	}
 
 	return postErr
@@ -71,7 +71,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 	mAuthenticateLatency := metrics.GetOrRegisterTimer(`CloudConnector.postOAuthWebhook.Authenticate-Latency`, nil)
 	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postOAuthWebhook.WebhookPost-Latency`, nil)
 
-	log.Debug("Posting with Authentication")
+	log.Debug("Posting with oauth 2 Authentication")
 
 	timeout := time.Duration(connectionTimeout) * time.Second
 	client := &http.Client{
@@ -191,15 +191,19 @@ func postWebhookAccessToken(data []byte, URL string, tokenType string, accessTok
 	return nil
 }
 
-// postWebhookNoAuthentication post to webhook with no authentication
-func postWebhookNoAuthentication(webh Webhook, proxy string) error {
-	metrics.GetOrRegisterGauge(`CloudConnector.postWebhookNoAuthentication.Attempt`, nil).Update(1)
-	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postWebhookNoAuthentication.Success`, nil)
-	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postWebhookNoAuthentication.Marshal-Error", nil)
-	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postWebhookNoAuthentication.Webhook-Error", nil)
-	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postWebhookNoAuthentication.mWebhookPost-Latency`, nil)
+// postWebhook post to webhook
+func postWebhook(webh Webhook, proxy string) error {
+	metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Attempt`, nil).Update(1)
+	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Success`, nil)
+	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Marshal-Error", nil)
+	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Error", nil)
+	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postWebhook.mWebhookPost-Latency`, nil)
 
-	log.Debug("Posting without Authentication\n")
+	if webh.Auth.AuthType != "" {
+		log.Debugf("Posting with %s Authentication\n", webh.Auth.AuthType)
+	} else {
+		log.Debug("Posting without Authentication\n")
+	}
 
 	timeout := time.Duration(connectionTimeout) * time.Second
 	client := &http.Client{
@@ -235,8 +239,8 @@ func postWebhookNoAuthentication(webh Webhook, proxy string) error {
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {
 			log.WithFields(log.Fields{
-				"Method": "postWebhookNoAuthentication",
-				"Action": "process the no authentication webhook request",
+				"Method": "postWebhook",
+				"Action": "process the webhook request",
 			}).Fatal(err.Error())
 		}
 	}()
