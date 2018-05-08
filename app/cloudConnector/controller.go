@@ -37,7 +37,8 @@ import (
 const (
 	oauth2            = "oauth2"
 	jsonApplication   = "application/json;charset=utf-8"
-	connectionTimeout = 15
+	oAuthConnectionTimeout = 15
+	webhookConnectionTimeout = 60
 	responseMaxSize   = 16 << 20
 )
 
@@ -73,7 +74,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 
 	log.Debug("Posting with oauth 2 Authentication")
 
-	timeout := time.Duration(connectionTimeout) * time.Second
+	timeout := time.Duration(oAuthConnectionTimeout) * time.Second
 	client := &http.Client{
 		Timeout: timeout,
 	}
@@ -205,7 +206,7 @@ func postWebhook(webh Webhook, proxy string) error {
 		log.Debug("Posting without Authentication\n")
 	}
 
-	timeout := time.Duration(connectionTimeout) * time.Second
+	timeout := time.Duration(webhookConnectionTimeout) * time.Second
 	client := &http.Client{
 		Timeout: timeout,
 	}
