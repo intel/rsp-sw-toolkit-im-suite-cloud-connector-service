@@ -86,10 +86,10 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 	traceID := ctx.Value(web.KeyValues).(*web.ContextValues).TraceID
 
 	// Metrics
-	metrics.GetOrRegisterGauge("CloudConnector.notifywebhook.Attempt", nil).Update(1)
+	metrics.GetOrRegisterGauge("CloudConnector.callwebhook.Attempt", nil).Update(1)
 
 	startTime := time.Now()
-	defer metrics.GetOrRegisterTimer("CloudConnector.notifywebhook.Latency", nil).Update(time.Since(startTime))
+	defer metrics.GetOrRegisterTimer("CloudConnector.callwebhook.Latency", nil).Update(time.Since(startTime))
 	var webHookObj cloudConnector.Webhook
 
 	validationErrors, marshalError := unmarshalRequestBody(writer, request, &webHookObj, cloudConnector.WebhookSchema)

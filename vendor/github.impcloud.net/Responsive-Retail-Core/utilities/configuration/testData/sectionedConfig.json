@@ -54,7 +54,7 @@
     "locationEndpoint": "/locations",
     "skusEndpoint": "/skus",
     "inventoryEndpoint": "/inventory/tags",
-    "notificationWebhookEndpoint": "/notifywebhook",
+    "cloudConnectorEndpoint": "/callwebhook",
     "port": "8085",
     "ruleExecutionPeriodInSec": 300
   },
