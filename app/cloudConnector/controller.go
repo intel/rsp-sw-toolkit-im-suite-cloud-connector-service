@@ -232,10 +232,15 @@ func postWebhook(webh Webhook, proxy string) error {
 
 	postTimer := time.Now()
 	response, err := client.Do(request)
-	if err != nil || response.StatusCode != http.StatusOK {
-		mWebhookPostError.Update(int64(response.StatusCode))
+	if err != nil {
 		return err
 	}
+
+	if response.StatusCode != http.StatusOK {
+		mWebhookPostError.Update(int64(response.StatusCode))
+		return errors.Errorf("Error posting to Webhook, response status returned is %d",response.StatusCode)
+	}
+
 	mWebhookPostLatency.Update(time.Since(postTimer))
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {

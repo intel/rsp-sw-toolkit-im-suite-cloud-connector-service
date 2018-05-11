@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
+	"strings"
 )
 
 func GenerateWebhook(testServerURL string, auth bool) Webhook {
@@ -248,8 +249,12 @@ func TestOAuth2PostWebhookNoAuthenticationForbidden(t *testing.T) {
 	webHook.Payload = data
 
 	err := ProcessWebhook(webHook, "")
-	if err != nil {
-		t.Error(err)
+	if err == nil {
+		t.Fatalf("Expected error, but didn't get one")
+	}
+
+	if !strings.Contains(err.Error(),"response status returned is 403") {
+		t.Fatalf("Received error as expected, but didn't get one with 403 status.")
 	}
 }
 
