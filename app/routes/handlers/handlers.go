@@ -100,7 +100,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 				"Method": "CallWebhook",
 				"Action": "post notification to webhooks",
 				"Code":   http.StatusRequestEntityTooLarge,
-			}).Info("Request Body too large")
+			}).Error("Request Body too large")
 			web.RespondError(ctx, writer, marshalError, http.StatusRequestEntityTooLarge)
 			return nil
 		}
@@ -118,7 +118,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 			"Method": "CallWebhook",
 			"Action": "post notification to webhooks",
 			"Code":   http.StatusBadRequest,
-		}).Info("Validation errors")
+		}).Error("Validation errors")
 		web.Respond(ctx, writer, validationErrors, http.StatusBadRequest)
 		return nil
 	}
@@ -159,7 +159,7 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 			"Method":     "ProcessWebhook",
 			"TraceID":    traceID,
 			"webhookURL": webHookObj.URL,
-		}).Info("Successful!")
+		}).Debug("Successful!")
 
 		if !webHookObj.IsAsync {
 			web.Respond(ctx, writer, nil, http.StatusOK)
@@ -191,7 +191,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 				"Method": "AwsCloud",
 				"Action": "post to aws",
 				"Code":   http.StatusRequestEntityTooLarge,
-			}).Info("Request Body too large")
+			}).Error("Request Body too large")
 			web.RespondError(ctx, writer, marshalError, http.StatusBadRequest)
 			return nil
 		}
@@ -208,7 +208,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 			"Method": "AwsCloud",
 			"Action": "post to aws",
 			"Code":   http.StatusBadRequest,
-		}).Info("Validation errors")
+		}).Error("Validation errors")
 		web.Respond(ctx, writer, validationErrors, http.StatusBadRequest)
 		return nil
 	}
@@ -219,7 +219,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 			"Method": "AwsCloud",
 			"Action": "post to aws",
 			"Code":   http.StatusBadRequest,
-		}).Info("Failed unmarshalling payload")
+		}).Error("Failed unmarshalling payload")
 		web.Respond(ctx, writer, nil, http.StatusBadRequest)
 		return nil
 	}
@@ -239,7 +239,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 			"Method": "AwsCloud",
 			"Action": "post to aws",
 			"Code":   http.StatusBadRequest,
-		}).Info("Failed creating AWS session")
+		}).Error("Failed creating AWS session")
 		web.Respond(ctx, writer, nil, http.StatusBadRequest)
 		return nil
 	}
@@ -251,7 +251,7 @@ func (connector *CloudConnector) AwsCloud(ctx context.Context, writer http.Respo
 			"Method": "AwsCloud",
 			"Action": "post to aws",
 			"Code":   http.StatusBadRequest,
-		}).Info("Failed creating AWS client")
+		}).Error("Failed creating AWS client")
 		web.Respond(ctx, writer, err, http.StatusBadRequest)
 		return err
 	}
@@ -297,7 +297,7 @@ func s3FileExists(s3Client *s3.S3, bucketName string, objectName string) bool {
 			"Method": "s3FileExists",
 			"Action": "checking if aws file already exists",
 			"Error":  err,
-		}).Info("Failed creating AWS client")
+		}).Error("Failed creating AWS client")
 	}
 
 	return err == nil
