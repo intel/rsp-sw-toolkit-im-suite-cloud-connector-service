@@ -65,7 +65,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 	metrics.GetOrRegisterGauge(`CloudConnector.postOAuthWebhook.Attempt`, nil).Update(1)
 	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postOAuthWebhook.Success`, nil)
 	mAuthenticateError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Auth-Error", nil)
-	mRespopnseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Status-Error", nil)
+	mResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Status-Error", nil)
 	mDecoderError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Decoder-Error", nil)
 	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Marshal-Error", nil)
 	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Webhook-Error", nil)
@@ -114,7 +114,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 	}()
 
 	if response.StatusCode != http.StatusOK {
-		mRespopnseStatusError.Update(1)
+		mResponseStatusError.Update(int64(response.StatusCode))
 		bodySize, errBoolResponseBody := checkBodySize(response)
 		if !errBoolResponseBody {
 			body := make([]byte, bodySize)
@@ -156,6 +156,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 }
 
 func postWebhookAccessToken(data []byte, URL string, tokenType string, accessToken string, client *http.Client) error {
+	mPostResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postWebhookAccessToken.Status-Error", nil)
 
 	log.Debugf("Posting to endpoint %s\nwith auth", URL)
 
@@ -176,7 +177,7 @@ func postWebhookAccessToken(data []byte, URL string, tokenType string, accessTok
 	}()
 
 	if postResponse.StatusCode != http.StatusOK && postResponse.StatusCode != http.StatusNoContent {
-
+		mPostResponseStatusError.Update(int64(postResponse.StatusCode))
 		bodySize, errBoolResponseBody := checkBodySize(postResponse)
 		if !errBoolResponseBody {
 			body := make([]byte, bodySize)
@@ -231,9 +232,8 @@ func postWebhook(webh Webhook, proxy string) error {
 
 	postTimer := time.Now()
 	response, err := client.Do(request)
-	if err != nil ||
-		response.StatusCode != http.StatusOK {
-		mWebhookPostError.Update(1)
+	if err != nil || response.StatusCode != http.StatusOK {
+		mWebhookPostError.Update(int64(response.StatusCode))
 		return err
 	}
 	mWebhookPostLatency.Update(time.Since(postTimer))
