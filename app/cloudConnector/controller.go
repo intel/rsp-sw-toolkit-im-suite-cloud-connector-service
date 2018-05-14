@@ -199,6 +199,7 @@ func postWebhook(webh Webhook, proxy string) error {
 	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Success`, nil)
 	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Marshal-Error", nil)
 	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Error", nil)
+	mWebhookPostResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Status-Error", nil)
 	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postWebhook.mWebhookPost-Latency`, nil)
 
 	if webh.Auth.AuthType != "" {
@@ -233,11 +234,12 @@ func postWebhook(webh Webhook, proxy string) error {
 	postTimer := time.Now()
 	response, err := client.Do(request)
 	if err != nil {
-		return err
+		mWebhookPostError.Update(1)
+		return errors.Errorf("Error posting to Webhook: %s", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		mWebhookPostError.Update(int64(response.StatusCode))
+		mWebhookPostResponseStatusError.Update(int64(response.StatusCode))
 		return errors.Errorf("Error posting to Webhook, response status returned is %d",response.StatusCode)
 	}
 
