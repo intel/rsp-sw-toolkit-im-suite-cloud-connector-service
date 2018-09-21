@@ -39,7 +39,7 @@ type (
 var AppConfig variables
 
 // InitConfig loads application variables
-func InitConfig() error {
+func InitConfig(configChangedCallback func([]configuration.ChangeDetails)) error {
 	AppConfig = variables{}
 
 	var err error
@@ -48,6 +48,7 @@ func InitConfig() error {
 	if err != nil {
 		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
 	}
+	config.SetConfigChangeCallback(configChangedCallback)
 
 	AppConfig.ServiceName, err = config.GetString("serviceName")
 	if err != nil {

@@ -3,24 +3,24 @@ package main
 import (
 	"context"
 	"flag"
+	log "github.com/sirupsen/logrus"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes"
+	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/healthcheck"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/configuration"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
+	reporter "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics-influxdb"
+	golog "log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
-
-	log "github.com/sirupsen/logrus"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/healthcheck"
-	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
-	reporter "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics-influxdb"
 )
 
 func main() {
-
 	// Load config variables
-	if err := config.InitConfig(); err != nil {
+	if err := config.InitConfig(configChangedCallback); err != nil {
 		log.WithFields(log.Fields{
 			"Method": "config.InitConfig",
 			"Action": "Load config",
@@ -37,11 +37,7 @@ func main() {
 	// Initialize metrics reporting
 	initMetrics()
 
-	if config.AppConfig.LoggingLevel == "debug" {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetFormatter(&log.JSONFormatter{})
-	}
+	setLoggingLevel(config.AppConfig.LoggingLevel)
 
 	log.WithFields(log.Fields{
 		"Method": "main",
@@ -107,6 +103,27 @@ func main() {
 	// Wait for the listener to report it is closed.
 	wg.Wait()
 	log.WithField("Method", "main").Info("Completed.")
+}
+
+func configChangedCallback(changeDetails []configuration.ChangeDetails) {
+	if len(changeDetails) == 1 && changeDetails[0].Name == "loggingLevel" {
+		setLoggingLevel(changeDetails[0].Value.(string))
+		return
+	}
+
+	log.Info("config has changed with some field that requires restarting")
+	os.Exit(0)
+}
+
+func setLoggingLevel(loggingLevel string) {
+	if loggingLevel == "debug" {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	// Not using filtered func (Info, etc ) so that message is always logged
+	golog.Printf("Logging level set to %s\n", loggingLevel)
 }
 
 func initMetrics() {
