@@ -111,7 +111,7 @@ func configChangedCallback(changeDetails []configuration.ChangeDetails) {
 		return
 	}
 
-	log.Info("config has changed with some field that requires restarting")
+	log.Info("Configuration has changed with some field that requires restarting")
 	os.Exit(0)
 }
 

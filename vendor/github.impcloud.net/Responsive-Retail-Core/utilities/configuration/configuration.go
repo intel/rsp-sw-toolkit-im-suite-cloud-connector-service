@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -29,6 +30,9 @@ const (
 	Added
 	Updated
 	Deleted
+
+	TimeStampFilePermissions = 666
+	BytesInUint64            = 8
 )
 
 type ChangeDetails struct {
@@ -134,7 +138,7 @@ func interfaceToString(values map[string]interface{}) (map[string]string, error)
 		case string:
 			mapOfString[key] = value.(string)
 		default:
-			return nil, fmt.Errorf("unexpected type found %s for value='%v' during conversion. currently accepts only int,float64,bool and string", reflect.TypeOf(value), value)
+			return nil, fmt.Errorf("unexpected type found %s for value='%v' during conversion. currently accepts only float64,bool and string", reflect.TypeOf(value), value)
 		}
 
 	}
@@ -387,31 +391,9 @@ func (config *Configuration) loadFromConsul(configFilePath string) bool {
 		return false
 	}
 
-	keyValuePair, _, err := consul.KV().Get(consulConfigKey, nil)
-	if err != nil {
-		log.Printf("error attempting to get '%s' value from Consul service: %s, using local configuration file", consulConfigKey, err.Error())
-		return false
-	}
-
+	keyValuePair := checkAndUpdateFromLocal(consul, consulConfigKey, configFilePath)
 	if keyValuePair == nil {
-		log.Printf("%s not found in Consul Service. Attempting to push local default configuration to Consul Service", consulConfigKey)
-
-		// Load the local default configuration file in order to push it to Consul.
-		fileBytes, readErr := ioutil.ReadFile(configFilePath)
-		if readErr != nil {
-			log.Printf("error attempting to load default configuration inorder to push to Consul Service: %s", err.Error())
-			return false
-		}
-
-		keyValuePair = &consulApi.KVPair{
-			Key:   consulConfigKey,
-			Value: fileBytes,
-		}
-
-		if _, putErr := consul.KV().Put(keyValuePair, nil); putErr != nil {
-			log.Printf("error pushing default configuration to '%s' value in Consul Service: %s", consulConfigKey, err.Error())
-			return false
-		}
+		return false
 	}
 
 	if err = json.Unmarshal(keyValuePair.Value, &config.parsedJson); err != nil {
@@ -541,4 +523,78 @@ func (config *Configuration) getChanges(changedList []ChangeDetails, previousSec
 	}
 
 	return changedList
+}
+
+func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, configFilePath string) *consulApi.KVPair {
+	keyValuePair, _, err := consul.KV().Get(consulConfigKey, nil)
+	if err != nil {
+		log.Printf("error attempting to get '%s' value from Consul service: %s, using local configuration file", consulConfigKey, err.Error())
+		return nil
+	}
+
+	timestampFile := configFilePath + ".timestamp"
+
+	localFileChanged, localConfigFileStats := localConfigurationChanged(configFilePath, timestampFile)
+	if localConfigFileStats == nil {
+		return nil
+	}
+
+	if keyValuePair == nil || localFileChanged {
+		log.Printf("%s not found in Consul Service or local file changed since last pushed. Attempting to push local default configuration to Consul Service", consulConfigKey)
+
+		// Load the local default configuration file in order to push it to Consul.
+		fileBytes, readErr := ioutil.ReadFile(configFilePath)
+		if readErr != nil {
+			log.Printf("error attempting to load default configuration inorder to push to Consul Service: %s", err.Error())
+			return nil
+		}
+
+		keyValuePair = &consulApi.KVPair{
+			Key:   consulConfigKey,
+			Value: fileBytes,
+		}
+
+		// Using local configuration to Consul so need to save the timestamp for the file so we know next time if it has changed.
+		timestamp := make([]byte, BytesInUint64)
+		binary.LittleEndian.PutUint64(timestamp, uint64(localConfigFileStats.ModTime().UnixNano()))
+		writeErr := ioutil.WriteFile(timestampFile, []byte(timestamp), TimeStampFilePermissions)
+		if writeErr != nil {
+			log.Printf("error saving timestamp of local configuration to file '%s': %s", timestampFile, err.Error())
+			return nil
+		}
+
+		if _, putErr := consul.KV().Put(keyValuePair, nil); putErr != nil {
+			log.Printf("error pushing default configuration to '%s' value in Consul Service: %s", consulConfigKey, err.Error())
+			return nil
+		}
+	}
+
+	return keyValuePair
+}
+
+func localConfigurationChanged(configFilePath string, timestampFile string) (bool, os.FileInfo) {
+
+	fileStats, statErr := os.Stat(configFilePath)
+	if statErr != nil {
+		log.Printf("error getting timestamp of local configuration to file '%s': %s", timestampFile, statErr.Error())
+		// can't get the timestamp of current file, so assume changed.
+		return true, nil
+	}
+
+	_, existsErr := os.Stat(timestampFile)
+	if os.IsNotExist(existsErr) {
+		// file doesn't exist, so can't compare, so file must be new. i.e. changed
+		return true, fileStats
+	}
+
+	timestampBytes, readErr := ioutil.ReadFile(timestampFile)
+	if readErr != nil {
+		log.Printf("error reading timestamp of last local configuration to file '%s': %s", timestampFile, readErr.Error())
+		// can't get the timestamp of last file used, so assume changed.
+		return true, fileStats
+	}
+
+	newTimeStamp := int64(binary.LittleEndian.Uint64(timestampBytes))
+
+	return newTimeStamp != fileStats.ModTime().UnixNano(), fileStats
 }
