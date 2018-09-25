@@ -30,7 +30,7 @@ const (
 	Updated
 	Deleted
 
-	TimeStampFilePermissions = 666
+	TimeStampFilePermissions = 0666
 )
 
 type ChangeDetails struct {
@@ -530,12 +530,7 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 		return nil
 	}
 
-	timestampFile := configFilePath + ".timestamp"
-
-	localFileChanged, localConfigFileStats := localConfigurationChanged(configFilePath, timestampFile)
-	if localConfigFileStats == nil {
-		return nil
-	}
+	localFileChanged := localConfigurationChanged(configFilePath)
 
 	if keyValuePair == nil || localFileChanged {
 		log.Printf("%s not found in Consul Service or local file changed since last pushed. Attempting to push local default configuration to Consul Service", consulConfigKey)
@@ -553,10 +548,7 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 		}
 
 		// Using local configuration to Consul so need to save the timestamp for the file so we know next time if it has changed.
-		timestamp := fmt.Sprintf("%d", uint64(localConfigFileStats.ModTime().UnixNano()))
-		writeErr := ioutil.WriteFile(timestampFile, []byte(timestamp), TimeStampFilePermissions)
-		if writeErr != nil {
-			log.Printf("error saving timestamp of local configuration to file '%s': %s", timestampFile, err.Error())
+		if saveCurrentTimeStamp(configFilePath) == false {
 			return nil
 		}
 
@@ -569,29 +561,50 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 	return keyValuePair
 }
 
-func localConfigurationChanged(configFilePath string, timestampFile string) (bool, os.FileInfo) {
+func saveCurrentTimeStamp(configFilePath string) bool {
+	timestampFile := configFilePath + ".timestamp"
+
+	fileStats, statErr := os.Stat(configFilePath)
+	if statErr != nil {
+		log.Printf("unable to save time stamp: Error getting timestamp of local configuration to file '%s': %s", timestampFile, statErr.Error())
+		return false
+	}
+
+	timestamp := fmt.Sprintf("%d", uint64(fileStats.ModTime().UnixNano()))
+	writeErr := ioutil.WriteFile(timestampFile, []byte(timestamp), TimeStampFilePermissions)
+	if writeErr != nil {
+		log.Printf("error saving timestamp of local configuration to file '%s': %s", timestampFile, writeErr.Error())
+		return false
+	}
+
+	return true
+}
+
+func localConfigurationChanged(configFilePath string) bool {
+
+	timestampFile := configFilePath + ".timestamp"
 
 	fileStats, statErr := os.Stat(configFilePath)
 	if statErr != nil {
 		log.Printf("error getting timestamp of local configuration to file '%s': %s", timestampFile, statErr.Error())
 		// can't get the timestamp of current file, so assume changed.
-		return true, nil
+		return true
 	}
 
 	_, existsErr := os.Stat(timestampFile)
 	if os.IsNotExist(existsErr) {
 		// file doesn't exist, so can't compare, so file must be new. i.e. changed
-		return true, fileStats
+		return true
 	}
 
 	timestampBytes, readErr := ioutil.ReadFile(timestampFile)
 	if readErr != nil {
 		log.Printf("error reading timestamp of last local configuration to file '%s': %s", timestampFile, readErr.Error())
 		// can't get the timestamp of last file used, so assume changed.
-		return true, fileStats
+		return true
 	}
 
 	originalTimeStamp := string(timestampBytes)
 	newTimeStamp := fmt.Sprintf("%d", fileStats.ModTime().UnixNano())
-	return newTimeStamp != originalTimeStamp, fileStats
+	return newTimeStamp != originalTimeStamp
 }

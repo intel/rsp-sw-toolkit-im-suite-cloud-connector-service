@@ -9,23 +9,25 @@ import (
 type GaugeCollection interface {
 	Snapshot() GaugeCollection
 	Add(int64)
+	AddWithTag(int64, Tag)
 	Readings() []GaugeReading
 	IsSet() bool
 	Clear()
 }
 
 type GaugeReading struct {
-	Reading     int64
-	Time        time.Time
+	Reading int64
+	Tag     *Tag
+	Time    time.Time
 }
 
 // GetOrRegisterGaugeCollection returns an existing Gauge or constructs and registers a
 // new StandardGaugeCollection.
-func GetOrRegisterGaugeCollection(name string, r Registry) GaugeCollection {
-	if nil == r {
-		r = DefaultRegistry
+func GetOrRegisterGaugeCollection(name string, registry Registry) GaugeCollection {
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	return r.GetOrRegister(name, NewGaugeCollection).(GaugeCollection)
+	return registry.GetOrRegister(name, NewGaugeCollection).(GaugeCollection)
 }
 
 // NewGaugeCollection constructs a new StandardGaugeCollection.
@@ -37,13 +39,13 @@ func NewGaugeCollection() GaugeCollection {
 }
 
 // NewRegisteredGaugeCollection constructs and registers a new StandardGaugeCollection.
-func NewRegisteredGaugeCollection(name string, r Registry) GaugeCollection {
-	c := NewGaugeCollection()
-	if nil == r {
-		r = DefaultRegistry
+func NewRegisteredGaugeCollection(name string, registry Registry) GaugeCollection {
+	gaugeCollection := NewGaugeCollection()
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	LogErrorIfAny(r.Register(name, c))
-	return c
+	LogErrorIfAny(registry.Register(name, gaugeCollection))
+	return gaugeCollection
 }
 
 // GaugeCollectionSnapshot is a read-only copy of another GaugeCollection.
@@ -52,24 +54,29 @@ type GaugeCollectionSnapshot struct {
 }
 
 // Snapshot returns the snapshot.
-func (g GaugeCollectionSnapshot) Snapshot() GaugeCollection { return g }
+func (gaugeCollection GaugeCollectionSnapshot) Snapshot() GaugeCollection { return gaugeCollection }
 
 // Add panics. Suppose to be read-only
 func (GaugeCollectionSnapshot) Add(int64) {
 	panic("Add called on a GaugeCollectionSnapshot")
 }
 
+// AddWithTag panics. Suppose to be read-only
+func (GaugeCollectionSnapshot) AddWithTag(int64, Tag) {
+	panic("AddWithTag called on a GaugeCollectionSnapshot")
+}
+
 // Readings returns the collect of readings at the time the snapshot was taken.
-func (g GaugeCollectionSnapshot) Readings() []GaugeReading {
-	return g.readings
+func (gaugeCollection GaugeCollectionSnapshot) Readings() []GaugeReading {
+	return gaugeCollection.readings
 }
 
 // IsSet returns true if the collection has any values
-func (g GaugeCollectionSnapshot) IsSet() bool {
-	return len(g.readings) > 0
+func (gaugeCollection GaugeCollectionSnapshot) IsSet() bool {
+	return len(gaugeCollection.readings) > 0
 }
 
-func (g GaugeCollectionSnapshot) Clear() {
+func (gaugeCollection GaugeCollectionSnapshot) Clear() {
 	panic("Clear called on a GaugeSnapshot")
 }
 
@@ -80,60 +87,77 @@ type NilGaugeCollection struct{}
 func (NilGaugeCollection) Snapshot() GaugeCollection { return NilGaugeCollection{} }
 
 // Add is a no-op.
-func (NilGaugeCollection) Add(v int64) {}
+func (NilGaugeCollection) Add(value int64) {}
+
+// AddWithTag is a no-op.
+func (NilGaugeCollection) AddWithTag(value int64, tag Tag) {}
 
 // Readings is a no-op.
 func (NilGaugeCollection) Readings() []GaugeReading { return nil }
 
 // IsSet is a no-op.
-func (NilGaugeCollection) IsSet() bool { return false}
+func (NilGaugeCollection) IsSet() bool { return false }
 
 // Clear is a no-op.
-func (NilGaugeCollection) Clear() { }
+func (NilGaugeCollection) Clear() {}
 
 // StandardGaugeCollection is the standard implementation of a GaugeCollection and uses the
 // sync.Mutex to manage the struct values.
 type StandardGaugeCollection struct {
-	mutex sync.Mutex
+	mutex    sync.Mutex
 	readings []GaugeReading
 }
 
 // Snapshot returns a read-only copy of the GaugeCollection.
-func (g *StandardGaugeCollection) Snapshot() GaugeCollection {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	readings :=	make([]GaugeReading, len(g.readings))
-	copy(readings,g.readings)
-	return GaugeCollectionSnapshot {readings}
+func (gaugeCollection *StandardGaugeCollection) Snapshot() GaugeCollection {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	readings := make([]GaugeReading, len(gaugeCollection.readings))
+	copy(readings, gaugeCollection.readings)
+	return GaugeCollectionSnapshot{readings}
 }
 
 // Add Adds a reading to the collection.
-func (g *StandardGaugeCollection) Add(reading int64) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	gaugeReading := GaugeReading{ Reading: reading, Time: time.Now()}
-	g.readings = append(g.readings, gaugeReading)
+func (gaugeCollection *StandardGaugeCollection) Add(reading int64) {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	gaugeReading := GaugeReading{Reading: reading, Time: time.Now()}
+	gaugeCollection.readings = append(gaugeCollection.readings, gaugeReading)
+}
+
+// AddWithTag Adds a reading to the collection with a corresponding tag
+func (gaugeCollection *StandardGaugeCollection) AddWithTag(reading int64, tag Tag) {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	gaugeReading := GaugeReading{
+		Reading: reading,
+		Tag: &Tag{
+			Name:  tag.Name,
+			Value: tag.Value,
+		},
+		Time: time.Now(),
+	}
+	gaugeCollection.readings = append(gaugeCollection.readings, gaugeReading)
 }
 
 // Readings returns a copy of the collection of readings.
-func (g *StandardGaugeCollection) Readings() []GaugeReading {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	readings :=	make([]GaugeReading, len(g.readings))
-	copy(readings,g.readings)
+func (gaugeCollection *StandardGaugeCollection) Readings() []GaugeReading {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	readings := make([]GaugeReading, len(gaugeCollection.readings))
+	copy(readings, gaugeCollection.readings)
 	return readings
 }
 
 // IsSet returns true if the collection has any values
-func (g *StandardGaugeCollection) IsSet() bool {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return len(g.readings) > 0
+func (gaugeCollection *StandardGaugeCollection) IsSet() bool {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	return len(gaugeCollection.readings) > 0
 }
 
-func (g *StandardGaugeCollection) Clear() {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	g.readings = []GaugeReading{}
+func (gaugeCollection *StandardGaugeCollection) Clear() {
+	gaugeCollection.mutex.Lock()
+	defer gaugeCollection.mutex.Unlock()
+	gaugeCollection.readings = []GaugeReading{}
 }
-
