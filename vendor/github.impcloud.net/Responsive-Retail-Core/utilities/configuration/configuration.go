@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,7 +31,6 @@ const (
 	Deleted
 
 	TimeStampFilePermissions = 666
-	BytesInUint64            = 8
 )
 
 type ChangeDetails struct {
@@ -555,8 +553,7 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 		}
 
 		// Using local configuration to Consul so need to save the timestamp for the file so we know next time if it has changed.
-		timestamp := make([]byte, BytesInUint64)
-		binary.LittleEndian.PutUint64(timestamp, uint64(localConfigFileStats.ModTime().UnixNano()))
+		timestamp := fmt.Sprintf("%d", uint64(localConfigFileStats.ModTime().UnixNano()))
 		writeErr := ioutil.WriteFile(timestampFile, []byte(timestamp), TimeStampFilePermissions)
 		if writeErr != nil {
 			log.Printf("error saving timestamp of local configuration to file '%s': %s", timestampFile, err.Error())
@@ -594,7 +591,7 @@ func localConfigurationChanged(configFilePath string, timestampFile string) (boo
 		return true, fileStats
 	}
 
-	newTimeStamp := int64(binary.LittleEndian.Uint64(timestampBytes))
-
-	return newTimeStamp != fileStats.ModTime().UnixNano(), fileStats
+	originalTimeStamp := string(timestampBytes)
+	newTimeStamp := fmt.Sprintf("%d", fileStats.ModTime().UnixNano())
+	return newTimeStamp != originalTimeStamp, fileStats
 }
