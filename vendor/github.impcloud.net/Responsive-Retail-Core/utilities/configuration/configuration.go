@@ -377,12 +377,7 @@ func (config *Configuration) loadConfiguration() error {
 	consulUrl, urlOk := os.LookupEnv("consulUrl")
 	consulConfigKey, keyOk := os.LookupEnv("consulConfigKey")
 	if urlOk && keyOk {
-		if err := config.loadFromConsul(absolutePath, consulUrl, consulConfigKey); err != nil {
-			return err
-		}
-
-		// Using Consul with out error so return now so following code skipped
-		return nil
+		return config.loadFromConsul(absolutePath, consulUrl, consulConfigKey)
 	}
 
 	log.Print("consulUrl and/or consulConfigKey environment variable not set, using local configuration file")
