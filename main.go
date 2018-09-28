@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 )
@@ -103,13 +104,19 @@ func main() {
 }
 
 func configChangedCallback(changeDetails []configuration.ChangeDetails) {
-	if len(changeDetails) == 1 && changeDetails[0].Name == "loggingLevel" {
-		setLoggingLevel(changeDetails[0].Value.(string))
-		return
-	}
+	for _, item := range changeDetails {
+		// Only handle logging changes on the fly
+		if !strings.HasSuffix(item.Name, "loggingLevel") {
+			log.Info("Configuration has changed with some field that requires restarting")
 
-	log.Info("Configuration has changed with some field that requires restarting")
-	os.Exit(0)
+			// Exit since config has changed with some field that requires restarting.
+			os.Exit(0)
+		}
+
+		if item.Operation != configuration.Deleted {
+			setLoggingLevel(changeDetails[0].Value.(string))
+		}
+	}
 }
 
 func setLoggingLevel(loggingLevel string) {
