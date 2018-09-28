@@ -46,18 +46,18 @@ func InitConfig(configChangedCallback func([]configuration.ChangeDetails)) error
 
 	config, err := configuration.NewConfiguration()
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 	config.SetConfigChangeCallback(configChangedCallback)
 
 	AppConfig.ServiceName, err = config.GetString("serviceName")
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 
 	AppConfig.Port, err = config.GetString("port")
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 	AppConfig.TelemetryEndpoint, err = config.GetString("telemetryEndpoint")
 	if err != nil {
@@ -67,18 +67,18 @@ func InitConfig(configChangedCallback func([]configuration.ChangeDetails)) error
 
 	AppConfig.TelemetryDataStoreName, err = config.GetString("telemetryDataStoreName")
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 
 	AppConfig.HttpsProxyURL, err = config.GetString("httpsProxyURL")
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 
 	// Set "debug" for development purposes. Nil for Production.
 	AppConfig.LoggingLevel, err = config.GetString("loggingLevel")
 	if err != nil {
-		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
+		return errors.Wrapf(err, "Unable to load config variables")
 	}
 
 	return nil

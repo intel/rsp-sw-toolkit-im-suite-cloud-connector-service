@@ -21,10 +21,7 @@ import (
 func main() {
 	// Load config variables
 	if err := config.InitConfig(configChangedCallback); err != nil {
-		log.WithFields(log.Fields{
-			"Method": "config.InitConfig",
-			"Action": "Load config",
-		}).Fatal(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	isHealthyPtr := flag.Bool("isHealthy", false, "a bool, runs a healthcheck")

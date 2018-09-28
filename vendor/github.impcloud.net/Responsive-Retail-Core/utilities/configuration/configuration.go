@@ -1,7 +1,27 @@
+/*
+ * INTEL CONFIDENTIAL
+ * Copyright (2018) Intel Corporation.
+ *
+ * The source code contained or described herein and all documents related to the source code ("Material")
+ * are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with
+ * Intel Corporation or its suppliers and licensors. The Material may contain trade secrets and proprietary
+ * and confidential information of Intel Corporation and its suppliers and licensors, and is protected by
+ * worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used,
+ * copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in
+ * any way without Intel/'s prior express written permission.
+ * No license under any patent, copyright, trade secret or other intellectual property right is granted
+ * to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication,
+ * inducement, estoppel or otherwise. Any license under such intellectual property rights must be express
+ * and approved by Intel in writing.
+ * Unless otherwise agreed by Intel in writing, you may not remove or alter this notice or any other
+ * notice embedded in Materials by Intel or Intel's suppliers or licensors in any way.
+ */
+
 package configuration
 
 import (
 	"fmt"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/consulApi"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,7 +32,6 @@ import (
 	"strings"
 
 	"encoding/json"
-	consulApi "github.com/hashicorp/consul/api"
 )
 
 type Configuration struct {
@@ -355,10 +374,18 @@ func (config *Configuration) loadConfiguration() error {
 		}
 	}
 
-	// Attempt to get configuration from Consul service. If can not then continue loading from file.
-	if config.loadFromConsul(absolutePath) {
+	consulUrl, urlOk := os.LookupEnv("consulUrl")
+	consulConfigKey, keyOk := os.LookupEnv("consulConfigKey")
+	if urlOk && keyOk {
+		if err := config.loadFromConsul(absolutePath, consulUrl, consulConfigKey); err != nil {
+			return err
+		}
+
+		// Using Consul with out error so return now so following code skipped
 		return nil
 	}
+
+	log.Print("consulUrl and/or consulConfigKey environment variable not set, using local configuration file")
 
 	if absolutePath != "" {
 		err := config.Load(absolutePath)
@@ -370,50 +397,33 @@ func (config *Configuration) loadConfiguration() error {
 	return nil
 }
 
-func (config *Configuration) loadFromConsul(configFilePath string) bool {
-	consulConfigKey, ok := os.LookupEnv("consulConfigKey")
-	if !ok {
-		log.Print("consulConfigKey environment variable not set, using local configuration file")
-		return false
+func (config *Configuration) loadFromConsul(configFilePath string, consulUrl string, consulConfigKey string) error {
+
+	consul, clientErr := consulApi.NewClient(&consulApi.Config{Address: consulUrl})
+	if clientErr != nil {
+		return fmt.Errorf("not able to communicate with Consul service: %s", clientErr.Error())
 	}
 
-	consulUrl, ok := os.LookupEnv("consulUrl")
-	if !ok {
-		log.Print("consulUrl environment variable not set, using local configuration file")
-		return false
+	keyValuePair, checkErr := checkAndUpdateFromLocal(consul, consulConfigKey, configFilePath)
+	if checkErr != nil {
+		return checkErr
 	}
 
-	consul, err := consulApi.NewClient(&consulApi.Config{Address: consulUrl})
-	if err != nil {
-		log.Printf("not able to communicate with Consul service: %s, using local configuration file", err.Error())
-		return false
-	}
-
-	keyValuePair := checkAndUpdateFromLocal(consul, consulConfigKey, configFilePath)
-	if keyValuePair == nil {
-		return false
-	}
-
-	if err = json.Unmarshal(keyValuePair.Value, &config.parsedJson); err != nil {
-		log.Printf("error marshaling JSON configuration received from/pushed to Consul Service: %s, using local configuration file", err.Error())
-		return false
+	if err := json.Unmarshal(keyValuePair.Value, &config.parsedJson); err != nil {
+		return fmt.Errorf("error marshaling JSON configuration received from/pushed to Consul Service: %s", err.Error())
 	}
 
 	// Now that we know we are using Consul service, we need to create a watch on the configuration for changes.
-	watcher, err := NewWatcher(consul, consulConfigKey)
-	if err != nil {
-		log.Printf("error creating watcher for chnages to value for %s: %s", consulConfigKey, err.Error())
-		return true // true because configuration came from consul, but unable to watch for changes.
+	watcher, watcherErr := NewWatcher(consul, consulConfigKey)
+	if watcherErr != nil {
+		return fmt.Errorf("error creating watcher for chnages to value for %s: %s", consulConfigKey, watcherErr.Error())
 	}
 
-	err = watcher.Start(config.processConfigurationChanged)
-
-	if err != nil {
-		log.Printf("error starting watcher for chnages to value for %s: %s", consulConfigKey, err.Error())
-		return true // true because configuration came from consul, but unable to watch for changes.
+	if err := watcher.Start(config.processConfigurationChanged); err != nil {
+		return fmt.Errorf("error starting watcher for chnages to value for %s: %s", consulConfigKey, err.Error())
 	}
 
-	return true
+	return nil
 }
 
 func (config *Configuration) applyConfigurationJson(jsonBytes []byte) error {
@@ -523,11 +533,10 @@ func (config *Configuration) getChanges(changedList []ChangeDetails, previousSec
 	return changedList
 }
 
-func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, configFilePath string) *consulApi.KVPair {
-	keyValuePair, _, err := consul.KV().Get(consulConfigKey, nil)
+func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, configFilePath string) (*consulApi.KeyValuePair, error) {
+	keyValuePair, err := consul.GetValue(consulConfigKey, nil)
 	if err != nil {
-		log.Printf("error attempting to get '%s' value from Consul service: %s, using local configuration file", consulConfigKey, err.Error())
-		return nil
+		return nil, fmt.Errorf("error attempting to get '%s' value from Consul service: %s", consulConfigKey, err.Error())
 	}
 
 	localFileChanged := localConfigurationChanged(configFilePath)
@@ -538,46 +547,42 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 		// Load the local default configuration file in order to push it to Consul.
 		fileBytes, readErr := ioutil.ReadFile(configFilePath)
 		if readErr != nil {
-			log.Printf("error attempting to load default configuration inorder to push to Consul Service: %s", err.Error())
-			return nil
+			return nil, fmt.Errorf("error attempting to load default configuration inorder to push to Consul Service: %s", readErr.Error())
 		}
 
-		keyValuePair = &consulApi.KVPair{
+		keyValuePair = &consulApi.KeyValuePair{
 			Key:   consulConfigKey,
 			Value: fileBytes,
 		}
 
 		// Using local configuration to Consul so need to save the timestamp for the file so we know next time if it has changed.
-		if saveCurrentTimeStamp(configFilePath) == false {
-			return nil
+		if err := saveCurrentTimeStamp(configFilePath); err != nil {
+			return nil, err
 		}
 
-		if _, putErr := consul.KV().Put(keyValuePair, nil); putErr != nil {
-			log.Printf("error pushing default configuration to '%s' value in Consul Service: %s", consulConfigKey, err.Error())
-			return nil
+		if putErr := consul.PutValue(consulConfigKey, string(fileBytes)); putErr != nil {
+			return nil, fmt.Errorf("error pushing default configuration to '%s' value in Consul Service: %s", consulConfigKey, putErr.Error())
 		}
 	}
 
-	return keyValuePair
+	return keyValuePair, nil
 }
 
-func saveCurrentTimeStamp(configFilePath string) bool {
+func saveCurrentTimeStamp(configFilePath string) error {
 	timestampFile := configFilePath + ".timestamp"
 
 	fileStats, statErr := os.Stat(configFilePath)
 	if statErr != nil {
-		log.Printf("unable to save time stamp: Error getting timestamp of local configuration to file '%s': %s", timestampFile, statErr.Error())
-		return false
+		return fmt.Errorf("unable to save time stamp: Error getting timestamp of local configuration to file '%s': %s", timestampFile, statErr.Error())
 	}
 
 	timestamp := fmt.Sprintf("%d", uint64(fileStats.ModTime().UnixNano()))
 	writeErr := ioutil.WriteFile(timestampFile, []byte(timestamp), TimeStampFilePermissions)
 	if writeErr != nil {
-		log.Printf("error saving timestamp of local configuration to file '%s': %s", timestampFile, writeErr.Error())
-		return false
+		return fmt.Errorf("error saving timestamp of local configuration to file '%s': %s", timestampFile, writeErr.Error())
 	}
 
-	return true
+	return nil
 }
 
 func localConfigurationChanged(configFilePath string) bool {
