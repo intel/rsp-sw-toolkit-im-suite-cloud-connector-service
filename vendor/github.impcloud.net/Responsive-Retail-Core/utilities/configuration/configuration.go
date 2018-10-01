@@ -48,8 +48,6 @@ const (
 	Added
 	Updated
 	Deleted
-
-	TimeStampFilePermissions = 0666
 )
 
 type ChangeDetails struct {
@@ -534,10 +532,8 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 		return nil, fmt.Errorf("error attempting to get '%s' value from Consul service: %s", consulConfigKey, err.Error())
 	}
 
-	localFileChanged := localConfigurationChanged(consul, configFilePath, consulConfigKey)
-
-	if keyValuePair == nil || localFileChanged {
-		log.Printf("%s not found in Consul Service or local file changed since last pushed. Attempting to push local default configuration to Consul Service", consulConfigKey)
+	if keyValuePair == nil {
+		log.Printf("%s not found in Consul Service. Attempting to push local default configuration to Consul Service", consulConfigKey)
 
 		// Load the local default configuration file in order to push it to Consul.
 		fileBytes, readErr := ioutil.ReadFile(configFilePath)
@@ -550,60 +546,10 @@ func checkAndUpdateFromLocal(consul *consulApi.Client, consulConfigKey string, c
 			Value: fileBytes,
 		}
 
-		// Using local configuration to Consul so need to save the timestamp for the file so we know next time if it has changed.
-		if err := saveCurrentTimeStamp(consul, configFilePath, consulConfigKey); err != nil {
-			return nil, err
-		}
-
 		if putErr := consul.PutValue(consulConfigKey, string(fileBytes)); putErr != nil {
 			return nil, fmt.Errorf("error pushing default configuration to '%s' value in Consul Service: %s", consulConfigKey, putErr.Error())
 		}
 	}
 
 	return keyValuePair, nil
-}
-
-func saveCurrentTimeStamp(consul *consulApi.Client, configFilePath string, consulConfigKey string) error {
-	timestampKey := consulConfigKey + "-timestamp"
-
-	fileStats, statErr := os.Stat(configFilePath)
-	if statErr != nil {
-		return fmt.Errorf("unable to save time stamp: Error getting timestamp of local configuration to file '%s': %s", configFilePath, statErr.Error())
-	}
-
-	timestamp := fmt.Sprintf("%d", uint64(fileStats.ModTime().UnixNano()))
-	writeErr := consul.PutValue(timestampKey, timestamp)
-	if writeErr != nil {
-		return fmt.Errorf("error saving timestamp of local configuration to Consul '%s': %s", timestampKey, writeErr.Error())
-	}
-
-	return nil
-}
-
-func localConfigurationChanged(consul *consulApi.Client, configFilePath string, consulConfigKey string) bool {
-
-	timestampKey := consulConfigKey + "-timestamp"
-
-	fileStats, statErr := os.Stat(configFilePath)
-	if statErr != nil {
-		log.Printf("error getting timestamp of local configuration to file '%s': %s", configFilePath, statErr.Error())
-		// can't get the timestamp of current file, so assume changed.
-		return true
-	}
-
-	keyValuePair, timestampGetErr := consul.GetValue(timestampKey, nil)
-	if timestampGetErr != nil {
-		log.Printf("error getting timestamp of last local configuration from Consul '%s': %s", timestampKey, timestampGetErr.Error())
-		// can't get the timestamp of last file used, so assume changed.
-		return true
-	}
-
-	if keyValuePair == nil {
-		// can't get the timestamp of last file used, so assume changed.
-		return true
-	}
-
-	originalTimeStamp := string(keyValuePair.Value)
-	newTimeStamp := fmt.Sprintf("%d", fileStats.ModTime().UnixNano())
-	return newTimeStamp != originalTimeStamp
 }
