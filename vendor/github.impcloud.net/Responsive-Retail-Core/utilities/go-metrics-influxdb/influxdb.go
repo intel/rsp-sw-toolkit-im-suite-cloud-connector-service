@@ -107,10 +107,16 @@ func (r *reporter) send() error {
 		case metrics.Gauge:
 			ms := metric.Snapshot()
 			if ms.IsSet() {
+				// Add the gauge's tag (if it has one) to the main tags list for sending for this data point
+				tags := copyTagMap(r.tags)
+				if ms.Tag() != nil {
+					tag := *ms.Tag()
+					tags[tag.Name] = tag.Value
+				}
 
 				pts = append(pts, client.Point{
 					Measurement: fmt.Sprintf("%s.gauge", name),
-					Tags:        r.tags,
+					Tags:        tags,
 					Fields: map[string]interface{}{
 						"value": ms.Value(),
 					},
@@ -122,9 +128,16 @@ func (r *reporter) send() error {
 		case metrics.GaugeFloat64:
 			ms := metric.Snapshot()
 			if ms.IsSet() {
+				// Add the gauge's tag (if it has one) to the main tags list for sending for this data point
+				tags := copyTagMap(r.tags)
+				if ms.Tag() != nil {
+					tag := *ms.Tag()
+					tags[tag.Name] = tag.Value
+				}
+
 				pts = append(pts, client.Point{
 					Measurement: fmt.Sprintf("%s.gauge", name),
-					Tags:        r.tags,
+					Tags:        tags,
 					Fields: map[string]interface{}{
 						"value": ms.Value(),
 					},
@@ -137,9 +150,16 @@ func (r *reporter) send() error {
 			ms := metric.Snapshot()
 			if ms.IsSet() {
 				for _, reading := range ms.Readings() {
+					// Add the gauge's tag (if it has one) to the main tags list for sending for this data point
+					tags := copyTagMap(r.tags)
+					if reading.Tag != nil {
+						tag := *reading.Tag
+						tags[tag.Name] = tag.Value
+					}
+
 					pts = append(pts, client.Point{
 						Measurement: fmt.Sprintf("%s.gauge", name), // individual points remain as a "gauge"
-						Tags:        r.tags,
+						Tags:        tags,
 						Fields: map[string]interface{}{
 							"value": reading.Reading,
 						},
@@ -221,4 +241,13 @@ func (r *reporter) send() error {
 
 	_, err := r.client.Write(bps)
 	return err
+}
+
+func copyTagMap(target map[string]string) map[string]string {
+	copy := make(map[string]string)
+	for name, value := range target {
+		copy[name] = value
+	}
+
+	return copy
 }

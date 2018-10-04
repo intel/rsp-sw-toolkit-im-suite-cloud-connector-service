@@ -2,22 +2,24 @@ package metrics
 
 import "sync"
 
-// GaugeFloat64 holds a float64 value that can be set arbitrarily.
+// GaugeFloat64 holds a float64 Value that can be set arbitrarily.
 type GaugeFloat64 interface {
 	Snapshot() GaugeFloat64
 	Update(float64)
+	UpdateWithTag(float64, Tag)
 	Value() float64
+	Tag() *Tag
 	IsSet() bool
 	Clear()
 }
 
 // GetOrRegisterGaugeFloat64 returns an existing GaugeFloat64 or constructs and registers a
 // new StandardGaugeFloat64.
-func GetOrRegisterGaugeFloat64(name string, r Registry) GaugeFloat64 {
-	if nil == r {
-		r = DefaultRegistry
+func GetOrRegisterGaugeFloat64(name string, registry Registry) GaugeFloat64 {
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	return r.GetOrRegister(name, NewGaugeFloat64()).(GaugeFloat64)
+	return registry.GetOrRegister(name, NewGaugeFloat64()).(GaugeFloat64)
 }
 
 // NewGaugeFloat64 constructs a new StandardGaugeFloat64.
@@ -27,67 +29,80 @@ func NewGaugeFloat64() GaugeFloat64 {
 	}
 	return &StandardGaugeFloat64{
 		value: 0.0,
+		tag:   nil,
 		isSet: false,
 	}
 }
 
 // NewRegisteredGaugeFloat64 constructs and registers a new StandardGaugeFloat64.
-func NewRegisteredGaugeFloat64(name string, r Registry) GaugeFloat64 {
-	c := NewGaugeFloat64()
-	if nil == r {
-		r = DefaultRegistry
+func NewRegisteredGaugeFloat64(name string, registry Registry) GaugeFloat64 {
+	gauge := NewGaugeFloat64()
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	LogErrorIfAny(r.Register(name, c))
-	return c
+	LogErrorIfAny(registry.Register(name, gauge))
+	return gauge
 }
 
 // NewFunctionalGaugeFloat64 constructs a new FunctionalGauge.
-func NewFunctionalGaugeFloat64(f func() float64, i func() bool) GaugeFloat64 {
+func NewFunctionalGaugeFloat64(value func() float64, tag func() *Tag, isSet func() bool) GaugeFloat64 {
 	if UseNilMetrics {
 		return NilGaugeFloat64{}
 	}
 	return &FunctionalGaugeFloat64{
-		value: f,
-		isSet: i,
+		value: value,
+		tag:   tag,
+		isSet: isSet,
 	}
 }
 
 // NewRegisteredFunctionalGaugeFloat64 constructs and registers a new StandardGauge.
-func NewRegisteredFunctionalGaugeFloat64(name string, r Registry, f func() float64, i func() bool) GaugeFloat64 {
-	c := NewFunctionalGaugeFloat64(f, i)
-	if nil == r {
-		r = DefaultRegistry
+func NewRegisteredFunctionalGaugeFloat64(name string, registry Registry, value func() float64, tag func() *Tag, isSet func() bool) GaugeFloat64 {
+	gauge := NewFunctionalGaugeFloat64(value, tag, isSet)
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	LogErrorIfAny(r.Register(name, c))
-	return c
+	LogErrorIfAny(registry.Register(name, gauge))
+	return gauge
 }
 
 // GaugeFloat64Snapshot is a read-only copy of another GaugeFloat64.
 type GaugeFloat64Snapshot struct {
 	value float64
+	tag   *Tag
 	isSet bool
 }
 
 // Snapshot returns the snapshot.
-func (g GaugeFloat64Snapshot) Snapshot() GaugeFloat64 { return g }
+func (gauge GaugeFloat64Snapshot) Snapshot() GaugeFloat64 { return gauge }
 
 // Update panics.
 func (GaugeFloat64Snapshot) Update(float64) {
 	panic("Update called on a GaugeFloat64Snapshot")
 }
 
-// Value returns the value at the time the snapshot was taken.
-func (g GaugeFloat64Snapshot) Value() float64 {
-	return g.value
+// UpdateWithTag panics.
+func (GaugeFloat64Snapshot) UpdateWithTag(float64, Tag) {
+	panic("UpdateWithTag called on a GaugeFloat64Snapshot")
+}
+
+// Value returns the Value at the time the snapshot was taken.
+func (gauge GaugeFloat64Snapshot) Value() float64 {
+	return gauge.value
+}
+
+// Value returns the tag at the time the snapshot was taken.
+func (gauge GaugeFloat64Snapshot) Tag() *Tag {
+	return gauge.tag
 }
 
 // IsSet returns the isSet at the time the snapshot was taken.
-func (g GaugeFloat64Snapshot) IsSet() bool {
-	return g.isSet
+func (gauge GaugeFloat64Snapshot) IsSet() bool {
+	return gauge.isSet
 }
 
 // Clear is not supposed to call for GaugeFloat64Snapshot.
-func (g GaugeFloat64Snapshot) Clear() {
+func (gauge GaugeFloat64Snapshot) Clear() {
 	panic("Clear called on a GaugeFloat64Snapshot")
 }
 
@@ -98,10 +113,16 @@ type NilGaugeFloat64 struct{}
 func (NilGaugeFloat64) Snapshot() GaugeFloat64 { return NilGaugeFloat64{} }
 
 // Update is a no-op.
-func (NilGaugeFloat64) Update(v float64) {}
+func (NilGaugeFloat64) Update(value float64) {}
+
+// UpdateWithTag is a no-op.
+func (NilGaugeFloat64) UpdateWithTag(value float64, tag Tag) {}
 
 // Value is a no-op.
 func (NilGaugeFloat64) Value() float64 { return 0.0 }
+
+// Tag is a no-op.
+func (NilGaugeFloat64) Tag() *Tag { return nil }
 
 // IsSet is a no-op.
 func (NilGaugeFloat64) IsSet() bool { return false }
@@ -114,73 +135,108 @@ func (NilGaugeFloat64) Clear() {}
 type StandardGaugeFloat64 struct {
 	mutex sync.Mutex
 	value float64
+	tag   *Tag
 	isSet bool
 }
 
 // Snapshot returns a read-only copy of the gauge.
-func (g *StandardGaugeFloat64) Snapshot() GaugeFloat64 {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return GaugeFloat64Snapshot{g.value, g.isSet}
+func (gauge *StandardGaugeFloat64) Snapshot() GaugeFloat64 {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	tag := gauge.tag
+	if tag != nil {
+		tag = &Tag{Name: gauge.tag.Name, Value: gauge.tag.Value}
+	}
+	return GaugeFloat64Snapshot{gauge.value, tag, gauge.isSet}
 }
 
-// Update updates the gauge's value.
-func (g *StandardGaugeFloat64) Update(v float64) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	g.value = v
-	g.isSet = true
+// Update updates the gauge's Value.
+func (gauge *StandardGaugeFloat64) Update(value float64) {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = value
+	gauge.tag = nil
+	gauge.isSet = true
 }
 
-// Value returns the gauge's current value.
-func (g *StandardGaugeFloat64) Value() float64 {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return g.value
+// Update updates the gauge's Value and corresponding tag
+func (gauge *StandardGaugeFloat64) UpdateWithTag(value float64, tag Tag) {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = value
+	gauge.tag = &Tag{Name: tag.Name, Value: tag.Value}
+	gauge.isSet = true
 }
 
-// IsSet returns the gauge's isSet value.
-func (g *StandardGaugeFloat64) IsSet() bool {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return g.isSet
+// Value returns the gauge's current Value.
+func (gauge *StandardGaugeFloat64) Value() float64 {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.value
 }
 
-// Clear resets the gauge's value to the defaults
-func (g *StandardGaugeFloat64) Clear() {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	g.value = 0.0
-	g.isSet = false
+// Value returns the gauge's current tag.
+func (gauge *StandardGaugeFloat64) Tag() *Tag {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.tag
 }
 
-// FunctionalGaugeFloat64 returns value from given function
+// IsSet returns the gauge's isSet Value.
+func (gauge *StandardGaugeFloat64) IsSet() bool {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.isSet
+}
+
+// Clear resets the gauge's Value to the defaults
+func (gauge *StandardGaugeFloat64) Clear() {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = 0.0
+	gauge.tag = nil
+	gauge.isSet = false
+}
+
+// FunctionalGaugeFloat64 returns Value from given function
 type FunctionalGaugeFloat64 struct {
 	value func() float64
+	tag   func() *Tag
 	isSet func() bool
 }
 
-// Value returns the gauge's current value.
-func (g FunctionalGaugeFloat64) Value() float64 {
-	return g.value()
+// Value returns the gauge's current Value.
+func (gauge FunctionalGaugeFloat64) Value() float64 {
+	return gauge.value()
 }
 
-// IsSet returns the gauge's isSet value.
-func (g FunctionalGaugeFloat64) IsSet() bool {
-	return g.isSet()
+// Value returns the gauge's current tag.
+func (gauge FunctionalGaugeFloat64) Tag() *Tag {
+	return gauge.tag()
+}
+
+// IsSet returns the gauge's isSet Value.
+func (gauge FunctionalGaugeFloat64) IsSet() bool {
+	return gauge.isSet()
 }
 
 // Snapshot returns the snapshot.
-func (g FunctionalGaugeFloat64) Snapshot() GaugeFloat64 {
+func (gauge FunctionalGaugeFloat64) Snapshot() GaugeFloat64 {
 	return GaugeFloat64Snapshot{
-		g.Value(),
-		g.IsSet(),
+		gauge.Value(),
+		gauge.Tag(),
+		gauge.IsSet(),
 	}
 }
 
 // Update panics.
 func (FunctionalGaugeFloat64) Update(float64) {
 	panic("Update called on a FunctionalGaugeFloat64")
+}
+
+// UpdateWithTag panics.
+func (FunctionalGaugeFloat64) UpdateWithTag(float64, Tag) {
+	panic("UpdateWithTag called on a FunctionalGaugeFloat64")
 }
 
 // Clear is not supposed to call on FunctionalGaugeFloat64.

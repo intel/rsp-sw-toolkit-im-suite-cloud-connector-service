@@ -4,5 +4,5 @@
   "telemetryEndpoint": "",
   "telemetryDataStoreName": "",
   "httpsProxyURL": "http://proxy-us.intel.com:912",
-  "port": "8080"
+  "port": "8089"
 }

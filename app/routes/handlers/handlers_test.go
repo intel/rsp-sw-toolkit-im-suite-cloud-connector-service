@@ -40,7 +40,7 @@ type inputTest struct {
 
 func TestMain(m *testing.M) {
 
-	_ = config.InitConfig()
+	_ = config.InitConfig(nil)
 
 	os.Exit(m.Run())
 

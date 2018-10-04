@@ -4,22 +4,24 @@ import (
 	"sync"
 )
 
-// Gauge holds an int64 value that can be set arbitrarily.
+// Gauge holds an int64 Value that can be set arbitrarily.
 type Gauge interface {
 	Snapshot() Gauge
 	Update(int64)
+	UpdateWithTag(int64, Tag)
 	Value() int64
+	Tag() *Tag
 	IsSet() bool
 	Clear()
 }
 
 // GetOrRegisterGauge returns an existing Gauge or constructs and registers a
 // new StandardGauge.
-func GetOrRegisterGauge(name string, r Registry) Gauge {
-	if nil == r {
-		r = DefaultRegistry
+func GetOrRegisterGauge(name string, registry Registry) Gauge {
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	return r.GetOrRegister(name, NewGauge).(Gauge)
+	return registry.GetOrRegister(name, NewGauge).(Gauge)
 }
 
 // NewGauge constructs a new StandardGauge.
@@ -29,67 +31,80 @@ func NewGauge() Gauge {
 	}
 	return &StandardGauge{
 		value: 0,
+		tag:   nil,
 		isSet: false,
 	}
 }
 
 // NewRegisteredGauge constructs and registers a new StandardGauge.
-func NewRegisteredGauge(name string, r Registry) Gauge {
-	c := NewGauge()
-	if nil == r {
-		r = DefaultRegistry
+func NewRegisteredGauge(name string, registry Registry) Gauge {
+	gauge := NewGauge()
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	LogErrorIfAny(r.Register(name, c))
-	return c
+	LogErrorIfAny(registry.Register(name, gauge))
+	return gauge
 }
 
 // NewFunctionalGauge constructs a new FunctionalGauge.
-func NewFunctionalGauge(f func() int64, i func() bool) Gauge {
+func NewFunctionalGauge(value func() int64, tag func() *Tag, isSet func() bool) Gauge {
 	if UseNilMetrics {
 		return NilGauge{}
 	}
 	return &FunctionalGauge{
-		value: f,
-		isSet: i,
+		value: value,
+		tag:   tag,
+		isSet: isSet,
 	}
 }
 
 // NewRegisteredFunctionalGauge constructs and registers a new StandardGauge.
-func NewRegisteredFunctionalGauge(name string, r Registry, f func() int64, i func() bool) Gauge {
-	c := NewFunctionalGauge(f, i)
-	if nil == r {
-		r = DefaultRegistry
+func NewRegisteredFunctionalGauge(name string, registry Registry, value func() int64, tag func() *Tag, isSet func() bool) Gauge {
+	gauge := NewFunctionalGauge(value, tag, isSet)
+	if nil == registry {
+		registry = DefaultRegistry
 	}
-	LogErrorIfAny(r.Register(name, c))
-	return c
+	LogErrorIfAny(registry.Register(name, gauge))
+	return gauge
 }
 
 // GaugeSnapshot is a read-only copy of another Gauge.
 type GaugeSnapshot struct {
 	value int64
+	tag   *Tag
 	isSet bool
 }
 
 // Snapshot returns the snapshot.
-func (g GaugeSnapshot) Snapshot() Gauge { return g }
+func (gauge GaugeSnapshot) Snapshot() Gauge { return gauge }
 
 // Update panics.
 func (GaugeSnapshot) Update(int64) {
 	panic("Update called on a GaugeSnapshot")
 }
 
-// Value returns the value at the time the snapshot was taken.
-func (g GaugeSnapshot) Value() int64 {
-	return g.value
+// Update panics.
+func (GaugeSnapshot) UpdateWithTag(int64, Tag) {
+	panic("UpdateWithTag called on a GaugeSnapshot")
+}
+
+// Value returns the Value at the time the snapshot was taken.
+func (gauge GaugeSnapshot) Value() int64 {
+	return gauge.value
+}
+
+// Value returns the tag at the time the snapshot was taken.
+func (gauge GaugeSnapshot) Tag() *Tag {
+	return gauge.tag
 }
 
 // IsSet returns whether gauge snapshot is set
-func (g GaugeSnapshot) IsSet() bool {
-	return g.isSet
+func (gauge GaugeSnapshot) IsSet() bool {
+	return gauge.isSet
 }
 
 // Clear is not supposed to call for GaugeSnapshot
-func (g GaugeSnapshot) Clear() {
+func (gauge GaugeSnapshot) Clear() {
 	panic("Clear called on a GaugeSnapshot")
 }
 
@@ -100,10 +115,16 @@ type NilGauge struct{}
 func (NilGauge) Snapshot() Gauge { return NilGauge{} }
 
 // Update is a no-op.
-func (NilGauge) Update(v int64) {}
+func (NilGauge) Update(value int64) {}
+
+// UpdateWithTag is a no-op.
+func (NilGauge) UpdateWithTag(int64, Tag) {}
 
 // Value is a no-op.
 func (NilGauge) Value() int64 { return 0 }
+
+// Tag is a no-op.
+func (NilGauge) Tag() *Tag { return nil }
 
 // IsSet is a no-op.
 func (NilGauge) IsSet() bool { return false }
@@ -116,55 +137,84 @@ func (NilGauge) Clear() {}
 type StandardGauge struct {
 	mutex sync.Mutex
 	value int64
+	tag   *Tag
 	isSet bool
 }
 
 // Snapshot returns a read-only copy of the gauge.
-func (g *StandardGauge) Snapshot() Gauge {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return GaugeSnapshot{g.value, g.isSet}
+func (gauge *StandardGauge) Snapshot() Gauge {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	tag := gauge.tag
+	if tag != nil {
+		tag = &Tag{Name: gauge.tag.Name, Value: gauge.tag.Value}
+	}
+	return GaugeSnapshot{gauge.value, tag, gauge.isSet}
 }
 
-// Update updates the gauge's value.
-func (g *StandardGauge) Update(v int64) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	g.value = v
-	g.isSet = true
+// Update updates the gauge's Value.
+func (gauge *StandardGauge) Update(value int64) {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = value
+	gauge.tag = nil
+	gauge.isSet = true
 }
 
-// Value returns the gauge's current value.
-func (g *StandardGauge) Value() int64 {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return g.value
+// Update updates the gauge's Value with a corresponding tag
+func (gauge *StandardGauge) UpdateWithTag(value int64, tag Tag) {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = value
+	gauge.tag = &Tag{Name: tag.Name, Value: tag.Value}
+	gauge.isSet = true
+}
+
+// Value returns the gauge's current Value.
+func (gauge *StandardGauge) Value() int64 {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.value
+}
+
+// Value returns the gauge's current Tag.
+func (gauge *StandardGauge) Tag() *Tag {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.tag
 }
 
 // IsSet returns whether standard gauge is set
-func (g *StandardGauge) IsSet() bool {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	return g.isSet
+func (gauge *StandardGauge) IsSet() bool {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	return gauge.isSet
 }
 
 // Clear reset the standard gauge to its default state
-func (g *StandardGauge) Clear() {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	g.value = 0
-	g.isSet = false
+func (gauge *StandardGauge) Clear() {
+	gauge.mutex.Lock()
+	defer gauge.mutex.Unlock()
+	gauge.value = 0
+	gauge.tag = nil
+	gauge.isSet = false
 }
 
-// FunctionalGauge returns value from given function
+// FunctionalGauge returns Value from given function
 type FunctionalGauge struct {
 	value func() int64
+	tag   func() *Tag
 	isSet func() bool
 }
 
-// Value returns the gauge's current value.
+// Value returns the gauge's current Value.
 func (g FunctionalGauge) Value() int64 {
 	return g.value()
+}
+
+// Value returns the gauge's current tag.
+func (g FunctionalGauge) Tag() *Tag {
+	return g.tag()
 }
 
 // IsSet returns whether functional gauge is set
@@ -176,6 +226,7 @@ func (g FunctionalGauge) IsSet() bool {
 func (g FunctionalGauge) Snapshot() Gauge {
 	return GaugeSnapshot{
 		g.Value(),
+		g.tag(),
 		g.IsSet(),
 	}
 }
@@ -183,6 +234,11 @@ func (g FunctionalGauge) Snapshot() Gauge {
 // Update panics.
 func (FunctionalGauge) Update(int64) {
 	panic("Update called on a FunctionalGauge")
+}
+
+// UpdateWithTag panics.
+func (FunctionalGauge) UpdateWithTag(int64, Tag) {
+	panic("UpdateWithTag called on a FunctionalGauge")
 }
 
 // Clear is not supposed to call for FunctionalGauge

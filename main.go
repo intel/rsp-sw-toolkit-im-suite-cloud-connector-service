@@ -3,28 +3,26 @@ package main
 import (
 	"context"
 	"flag"
-	"net/http"
-	"os"
-	"os/signal"
-	"sync"
-	"time"
-
 	log "github.com/sirupsen/logrus"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/routes"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/healthcheck"
-	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/configuration"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
 	reporter "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics-influxdb"
+	golog "log"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"sync"
+	"time"
 )
 
 func main() {
-
 	// Load config variables
-	if err := config.InitConfig(); err != nil {
-		log.WithFields(log.Fields{
-			"Method": "config.InitConfig",
-			"Action": "Load config",
-		}).Fatal(err.Error())
+	if err := config.InitConfig(configChangedCallback); err != nil {
+		log.Fatal(err.Error())
 	}
 
 	isHealthyPtr := flag.Bool("isHealthy", false, "a bool, runs a healthcheck")
@@ -37,11 +35,7 @@ func main() {
 	// Initialize metrics reporting
 	initMetrics()
 
-	if config.AppConfig.LoggingLevel == "debug" {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetFormatter(&log.JSONFormatter{})
-	}
+	setLoggingLevel(config.AppConfig.LoggingLevel)
 
 	log.WithFields(log.Fields{
 		"Method": "main",
@@ -107,6 +101,33 @@ func main() {
 	// Wait for the listener to report it is closed.
 	wg.Wait()
 	log.WithField("Method", "main").Info("Completed.")
+}
+
+func configChangedCallback(changeDetails []configuration.ChangeDetails) {
+	for _, item := range changeDetails {
+		// Only handle logging changes on the fly
+		if !strings.HasSuffix(item.Name, "loggingLevel") {
+			log.Info("Configuration has changed with some field that requires restarting")
+
+			// Exit since config has changed with some field that requires restarting.
+			os.Exit(0)
+		}
+
+		if item.Operation != configuration.Deleted {
+			setLoggingLevel(changeDetails[0].Value.(string))
+		}
+	}
+}
+
+func setLoggingLevel(loggingLevel string) {
+	if loggingLevel == "debug" {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	// Not using filtered func (Info, etc ) so that message is always logged
+	golog.Printf("Logging level set to %s\n", loggingLevel)
 }
 
 func initMetrics() {
