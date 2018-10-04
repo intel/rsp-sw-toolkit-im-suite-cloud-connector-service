@@ -74,10 +74,11 @@ func (watcher *Watcher) Start(changeCallback func([]byte)) error {
 			if err != nil {
 				log.Printf("Error watching %s key: %s", watcher.watchKey, err.Error())
 				time.Sleep(time.Second * 10) // Assume consul is restarting, so want long wait.
+				continue
 			}
 
 			if keyValuePair.ModifyIndex == targetIndex {
-				// Not change , so must have timed out. Try again
+				// No change , so must have timed out. Try again
 				continue
 			}
 
