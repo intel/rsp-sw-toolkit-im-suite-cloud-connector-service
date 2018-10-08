@@ -3,12 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "57T5+hbdUEONYNLBVsp7I3X44Vc=",
-			"path": "github.com/armon/go-metrics",
-			"revision": "f0300d1749da6fa982027e449ec0c7a145510c3c",
-			"revisionTime": "2018-09-17T15:23:33Z"
-		},
-		{
 			"checksumSHA1": "vD9/57YEq6z3Syr5NWFDuWYLriE=",
 			"path": "github.com/aws/aws-sdk-go",
 			"revision": "1cdcaa4385fe9c1adff1bc4c8ef38cfe99c4588d",
@@ -168,42 +162,6 @@
 			"revisionTime": "2017-06-21T21:27:26Z"
 		},
 		{
-			"checksumSHA1": "lF1TN2RjAb365nkF0yq/2Atqtxo=",
-			"path": "github.com/hashicorp/consul/api",
-			"revision": "96508e556b84e88e995225a6698f8e2f2433f7b0",
-			"revisionTime": "2018-09-21T10:14:38Z"
-		},
-		{
-			"checksumSHA1": "CUUEqSBx7xGIBzg6sQdO5Q0xBAE=",
-			"path": "github.com/hashicorp/go-cleanhttp",
-			"revision": "e8ab9daed8d1ddd2d3c4efba338fe2eeae2e4f18",
-			"revisionTime": "2018-08-30T03:37:06Z"
-		},
-		{
-			"checksumSHA1": "f9tN7XzjPLQOCsEL0OsvwBjZJEw=",
-			"path": "github.com/hashicorp/go-immutable-radix",
-			"revision": "27df80928bb34bb1b0d6d0e01b9e679902e7a6b5",
-			"revisionTime": "2018-08-30T03:32:45Z"
-		},
-		{
-			"checksumSHA1": "x4M2uMULc5qiKQNN6CPioGNXAnk=",
-			"path": "github.com/hashicorp/go-rootcerts",
-			"revision": "6bb64b370b90e7ef1fa532be9e591a81c3493e00",
-			"revisionTime": "2016-05-03T14:34:40Z"
-		},
-		{
-			"checksumSHA1": "0Jw0rHPsBBLTInjjhSlP7Hat+/4=",
-			"path": "github.com/hashicorp/golang-lru/simplelru",
-			"revision": "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
-			"revisionTime": "2018-08-30T03:29:55Z"
-		},
-		{
-			"checksumSHA1": "VekPhuqRHPZvUETrS5XFzPLQjJs=",
-			"path": "github.com/hashicorp/serf/coordinate",
-			"revision": "48d57945817366b5484d99353f1f33e990bd142d",
-			"revisionTime": "2018-09-07T13:02:40Z"
-		},
-		{
 			"checksumSHA1": "yN1i7Su3LMIVegYu2vUexipWF/A=",
 			"path": "github.com/influxdata/influxdb/client",
 			"revision": "8d679cf0c36edf5aaede7a0ea068cf9d0c9be409",
@@ -226,18 +184,6 @@
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5",
 			"revisionTime": "2018-02-06T20:15:40Z"
-		},
-		{
-			"checksumSHA1": "unX3YAHFGPudIwK1wB2R0AKDFSg=",
-			"path": "github.com/mitchellh/go-homedir",
-			"revision": "ae18d6b8b3205b561c79e8e5f69bff09736185f4",
-			"revisionTime": "2018-08-24T00:42:36Z"
-		},
-		{
-			"checksumSHA1": "+asIW03FCCzivqxj6un9rNn8jHM=",
-			"path": "github.com/mitchellh/mapstructure",
-			"revision": "fa473d140ef3c6adf42d6b391fe76707f1f243c8",
-			"revisionTime": "2018-08-24T00:32:02Z"
 		},
 		{
 			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
