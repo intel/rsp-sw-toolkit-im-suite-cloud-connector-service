@@ -120,10 +120,15 @@ func configChangedCallback(changeDetails []configuration.ChangeDetails) {
 }
 
 func setLoggingLevel(loggingLevel string) {
-	if loggingLevel == "debug" {
+	switch loggingLevel {
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "debug":
 		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetFormatter(&log.JSONFormatter{})
 	}
 
 	// Not using filtered func (Info, etc ) so that message is always logged
