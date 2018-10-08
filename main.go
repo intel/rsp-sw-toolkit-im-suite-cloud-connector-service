@@ -129,6 +129,9 @@ func setLoggingLevel(loggingLevel string) {
 		log.SetLevel(log.InfoLevel)
 	case "debug":
 		log.SetLevel(log.DebugLevel)
+	default:
+		log.Errorf("Invalid logging level '%s' attempted (valid values are 'error', 'warn', 'info', 'debug')", loggingLevel)
+		return
 	}
 
 	// Not using filtered func (Info, etc ) so that message is always logged
