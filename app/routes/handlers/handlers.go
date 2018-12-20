@@ -167,8 +167,9 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 		if !webHookObj.IsAsync {
 			if response != nil {
 				web.Respond(ctx, writer, response, http.StatusOK)
+			} else {
+				web.Respond(ctx, writer, nil, http.StatusOK)
 			}
-			web.Respond(ctx, writer, nil, http.StatusOK)
 		}
 		mSuccess.Update(1)
 	}

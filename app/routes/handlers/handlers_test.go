@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -96,6 +97,59 @@ func TestCallWebhook(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Errorf("Expected pass with 200 but returned: %d", recorder.Code)
 	}
+}
+
+func TestCallWebhookwithGetRequest(t *testing.T) {
+
+	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != "GET" {
+			t.Errorf("Expected 'GET' request, received '%s", request.Method)
+		}
+
+		escapedPath := request.URL.EscapedPath()
+		if escapedPath == "/callwebhook" {
+			jsonData, _ := json.Marshal("sucess")
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write(jsonData)
+		} else {
+			t.Errorf("Expected request to '/oauth' or 'notification', received %s", escapedPath)
+		}
+	}))
+
+	defer testMockServer.Close()
+
+	data := cloudConnector.Webhook{
+		URL:     testMockServer.URL + "/callwebhook",
+		Method:  "GET",
+		IsAsync: false,
+		Payload: []byte{}}
+	mData, marshalErr := json.Marshal(data)
+	if marshalErr != nil {
+		t.Errorf("Unable to marshal data: %s", marshalErr.Error())
+	}
+	request, err := http.NewRequest("GET", "/callwebhook'", bytes.NewBuffer(mData))
+	if err != nil {
+		t.Errorf("Unable to create new HTTP Request: %s", err.Error())
+	}
+
+	recorder := httptest.NewRecorder()
+
+	cloudConnector := CloudConnector{}
+
+	handler := web.Handler(cloudConnector.CallWebhook)
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Errorf("Expected pass with 200 but returned: %d", recorder.Code)
+	}
+	response := recorder.Result()
+	body, _ := ioutil.ReadAll(response.Body)
+	if len(body) < 0 {
+		t.Fatal("Get request is expected to have some repsonse back")
+
+	}
+
 }
 
 func TestCallWebhookNotAsync(t *testing.T) {
