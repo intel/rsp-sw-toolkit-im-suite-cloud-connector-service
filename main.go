@@ -20,6 +20,12 @@ import (
 )
 
 func main() {
+	// Ensure simple text format
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+
 	// Load config variables
 	if err := config.InitConfig(configChangedCallback); err != nil {
 		log.Fatal(err.Error())
