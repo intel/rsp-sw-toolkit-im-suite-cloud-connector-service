@@ -391,7 +391,7 @@ func TestPostWebhookNoAuthenticationForbidden(t *testing.T) {
 		t.Fatalf("Expected error, but didn't get one")
 	}
 
-	if !strings.Contains(err.Error(), "response status returned is 403") {
+	if !strings.Contains(err.Error(), "403") {
 		t.Fatalf("Received error as expected, but didn't get one with 403 status.")
 	}
 }

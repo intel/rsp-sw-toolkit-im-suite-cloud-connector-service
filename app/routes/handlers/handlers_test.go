@@ -185,6 +185,39 @@ func TestCallWebhookNotAsync(t *testing.T) {
 	}
 }
 
+func TestCallWebhookWithForbiddenHTTPMethods(t *testing.T) {
+
+	data := cloudConnector.Webhook{
+		URL:    "http://localhost/test",
+		Method: "PUT",
+		Auth: cloudConnector.Auth{
+			AuthType: "oauth2",
+			Endpoint: "http://localhost/testServerURL/oauth",
+			Data:     "testname:testpassword"},
+		IsAsync: false,
+		Payload: []byte{}}
+	mData, marshalErr := json.Marshal(data)
+	if marshalErr != nil {
+		t.Errorf("Unable to marshal data: %s", marshalErr.Error())
+	}
+	request, err := http.NewRequest("POST", "/callwebhook'", bytes.NewBuffer(mData))
+	if err != nil {
+		t.Errorf("Unable to create new HTTP Request: %s", err.Error())
+	}
+
+	recorder := httptest.NewRecorder()
+
+	cloudConnector := CloudConnector{}
+
+	handler := web.Handler(cloudConnector.CallWebhook)
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Errorf("Expected to fail with 400 but returned: %d", recorder.Code)
+	}
+}
+
 func TestCallWebhookInvalidJson(t *testing.T) {
 
 	var invalidJSONSample = []inputTest{

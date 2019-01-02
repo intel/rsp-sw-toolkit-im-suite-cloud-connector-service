@@ -98,7 +98,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 		if marshalError.Error() == "http: request body too large" {
 			log.WithFields(log.Fields{
 				"Method": "CallWebhook",
-				"Action": "post notification to webhooks",
+				"Action": "POST/GET notification to webhooks",
 				"Code":   http.StatusRequestEntityTooLarge,
 			}).Error("Request Body too large")
 			web.RespondError(ctx, writer, marshalError, http.StatusRequestEntityTooLarge)
@@ -116,7 +116,7 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 	if len(validationErrors) > 0 {
 		log.WithFields(log.Fields{
 			"Method": "CallWebhook",
-			"Action": "post notification to webhooks",
+			"Action": "POST/GET notification to webhooks",
 			"Code":   http.StatusBadRequest,
 		}).Error("Validation errors")
 		web.Respond(ctx, writer, validationErrors, http.StatusBadRequest)
@@ -129,11 +129,10 @@ func (connector *CloudConnector) CallWebhook(ctx context.Context, writer http.Re
 		web.Respond(ctx, writer, nil, http.StatusOK)
 
 	} else {
-		//In case if GET calls Isasync option is set to true by mistake, we reset it back to false.
+		//In case if GET calls IsAsync option is set to true by mistake, we reset it back to false.
 		webHookObj.IsAsync = false
 		cloudCall(ctx, writer, webHookObj)
 	}
-
 	return nil
 }
 
@@ -147,10 +146,12 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 
 	if response, err := cloudConnector.ProcessWebhook(webHookObj, config.AppConfig.HttpsProxyURL); err != nil {
 		log.WithFields(log.Fields{
-			"Method":      "CallWebhook",
-			"Action":      "process the webhook request",
-			"Webhook URL": webHookObj.URL,
-			"TraceID":     traceID,
+			"Method":        "CallWebhook",
+			"Action":        "process the webhook request",
+			"HTTP Method":   webHookObj.Method,
+			"Async Request": webHookObj.IsAsync,
+			"Webhook URL":   webHookObj.URL,
+			"TraceID":       traceID,
 		}).Error(err.Error())
 
 		if !webHookObj.IsAsync {
@@ -159,16 +160,17 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 		mError.Update(1)
 	} else {
 		log.WithFields(log.Fields{
-			"Method":     "ProcessWebhook",
-			"TraceID":    traceID,
-			"webhookURL": webHookObj.URL,
+			"Method":        "ProcessWebhook",
+			"TraceID":       traceID,
+			"HTTP Method":   webHookObj.Method,
+			"Async Request": webHookObj.IsAsync,
+			"webhookURL":    webHookObj.URL,
 		}).Debug("Successful!")
 
+		//If it is a async request, response woud have been sent already
 		if !webHookObj.IsAsync {
 			if response != nil {
 				web.Respond(ctx, writer, response, http.StatusOK)
-			} else {
-				web.Respond(ctx, writer, nil, http.StatusOK)
 			}
 		}
 		mSuccess.Update(1)
