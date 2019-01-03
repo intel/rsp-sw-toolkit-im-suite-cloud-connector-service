@@ -300,7 +300,7 @@ func checkBodySize(response *http.Response) (int64, bool) {
 }
 
 func getHTTPClient(timeout time.Duration, proxy string) (*http.Client, error) {
-	timeout = time.Duration(timeout) * time.Second
+	timeout = timeout * time.Second
 	client := &http.Client{
 		Timeout: timeout,
 	}
