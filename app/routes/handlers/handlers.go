@@ -167,10 +167,12 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 			"webhookURL":    webHookObj.URL,
 		}).Debug("Successful!")
 
-		//If it is a async request, response woud have been sent already
+		//If its not a async request, then set a response for GET request
 		if !webHookObj.IsAsync {
 			if response != nil {
 				web.Respond(ctx, writer, response, http.StatusOK)
+			} else {
+				web.Respond(ctx, writer, nil, http.StatusOK)
 			}
 		}
 		mSuccess.Update(1)
