@@ -108,7 +108,7 @@ func TestCallWebhookwithGetRequest(t *testing.T) {
 
 		escapedPath := request.URL.EscapedPath()
 		if escapedPath == "/callwebhook" {
-			jsonData, _ := json.Marshal("sucess")
+			jsonData, _ := json.Marshal("success")
 			writer.Header().Set("Content-Type", "application/json")
 			_, _ = writer.Write(jsonData)
 		} else {
@@ -146,7 +146,7 @@ func TestCallWebhookwithGetRequest(t *testing.T) {
 	response := recorder.Result()
 	body, _ := ioutil.ReadAll(response.Body)
 	if len(body) < 0 {
-		t.Fatal("Get request is expected to have some repsonse back")
+		t.Fatal("Get request is expected to have some response back")
 
 	}
 
@@ -214,7 +214,7 @@ func TestCallWebhookWithForbiddenHTTPMethods(t *testing.T) {
 	handler.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusBadRequest {
-		t.Errorf("Expected to fail with 400 but returned: %d", recorder.Code)
+		t.Errorf("Expected to fail with 400	 but returned: %d", recorder.Code)
 	}
 }
 

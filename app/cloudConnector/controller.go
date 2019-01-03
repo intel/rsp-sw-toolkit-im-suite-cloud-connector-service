@@ -300,14 +300,14 @@ func checkBodySize(response *http.Response) (int64, bool) {
 }
 
 func getHTTPClient(timeout time.Duration, proxy string) (*http.Client, error) {
-	timeout = time.Duration(oAuthConnectionTimeout) * time.Second
+	timeout = time.Duration(timeout) * time.Second
 	client := &http.Client{
 		Timeout: timeout,
 	}
 	if proxy != "" {
 		proxyURL, parseErr := url.Parse(proxy)
 		if parseErr != nil {
-			errors.Wrapf(parseErr, "unable to POST or GET to webhook due to error in parsing proxy URL: %s", proxy)
+			return nil, errors.Wrapf(parseErr, "unable to POST or GET webhook due to error in parsing proxy URL: %s", proxy)
 		}
 		transport := http.Transport{
 			Proxy: http.ProxyURL(proxyURL),
