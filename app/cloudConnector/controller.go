@@ -73,7 +73,7 @@ func getAccessToken(webhook Webhook, proxy string) (map[string]interface{}, erro
 
 	client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)
 	if httpClientErr != nil {
-		return nil, httpClientErr
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
 	}
 
 	// Make the POST to authenticate
@@ -144,12 +144,12 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 
 	}
 
-	log.Debugf("GET or POST to endpoint %s with auth", webhook.URL)
+	log.Debugf("%s to endpoint %s with auth", webhook.Method, webhook.URL)
 
 	//Set timeout and proxy for http client if present/needed
 	client, httpClientErr := getHTTPClient(webhookConnectionTimeout, proxy)
 	if httpClientErr != nil {
-		return nil, httpClientErr
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
 	}
 
 	//Get Access token for the endpoint
@@ -181,7 +181,7 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.Auth.Endpoint)
+		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.URL)
 	}
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {
@@ -230,12 +230,12 @@ func getOrPostWebhook(webhook Webhook, proxy string) (interface{}, error) {
 
 	}
 
-	log.Debugf("GET or POST to endpoint %s without auth", webhook.URL)
+	log.Debugf("%s to endpoint %s without auth", webhook.Method, webhook.URL)
 
 	//Set timeout and proxy for http client if present/needed
 	client, httpClientErr := getHTTPClient(webhookConnectionTimeout, proxy)
 	if httpClientErr != nil {
-		return nil, httpClientErr
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
 	}
 
 	//Request creation based on HTTTP mehtod type and adding headers
@@ -259,7 +259,7 @@ func getOrPostWebhook(webhook Webhook, proxy string) (interface{}, error) {
 	getTimer := time.Now()
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.Auth.Endpoint)
+		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.URL)
 	}
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {
@@ -300,14 +300,14 @@ func checkBodySize(response *http.Response) (int64, bool) {
 }
 
 func getHTTPClient(timeout time.Duration, proxy string) (*http.Client, error) {
-	timeout = timeout * time.Second
+	timeOutSec := timeout * time.Second
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: timeOutSec,
 	}
 	if proxy != "" {
 		proxyURL, parseErr := url.Parse(proxy)
 		if parseErr != nil {
-			return nil, errors.Wrapf(parseErr, "unable to POST or GET webhook due to error in parsing proxy URL: %s", proxy)
+			return nil, parseErr
 		}
 		transport := http.Transport{
 			Proxy: http.ProxyURL(proxyURL),

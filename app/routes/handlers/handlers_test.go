@@ -214,7 +214,7 @@ func TestCallWebhookWithForbiddenHTTPMethods(t *testing.T) {
 	handler.ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusBadRequest {
-		t.Errorf("Expected to fail with 400	 but returned: %d", recorder.Code)
+		t.Errorf("Expected to fail with 400	 but reurned: %d", recorder.Code)
 	}
 }
 
