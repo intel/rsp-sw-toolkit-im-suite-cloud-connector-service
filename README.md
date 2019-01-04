@@ -15,7 +15,7 @@ $ govendor sync <package>
 ## Linting
 We use gometalinter.v2 for linting of code. The linter options are in a config file stored in the Go-Mongo-Docker-Build repository. You must clone this repository and pull latest prior to running the linter as follows:
 ```bash
-gometalinter.v2 --vendor --deadline=120s --disable gotype --config=../Go-Mongo-Docker-Build/linter.json ./...
+gometalinter.v2 --vendor --deadline=120s --disable gotype --config=../ci-go-build-image/linter.json ./...
 ```
 ## Testing
 In order to test your micro service using docker, compile your project and run docker-compose to orchestrate dependencies such as context sensing brokers (in & out), inventory-service and mapping-sku-service:
