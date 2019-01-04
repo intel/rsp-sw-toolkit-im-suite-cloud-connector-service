@@ -78,7 +78,8 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	if accessTokenMap == nil || accessTokenMap["token_type"] == nil || accessTokenMap["token_type"] == "" ||
 		accessTokenMap["access_token"] == nil || accessTokenMap["access_token"] == "" ||
 		accessTokenMap["expires_in"] == nil || accessTokenMap["expires_in"] == "" ||
-		accessTokenMap["expirationDate"] == nil || accessTokenMap["expirationDate"].(int64) < helper.UnixMilliNow() {
+		accessTokenMap["expirationDate"] == nil ||
+		(accessTokenMap["expirationDate"] != nil && accessTokenMap["expirationDate"].(int64) < helper.UnixMilliNow()) {
 		log.Debug("Getting access token")
 
 		client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)

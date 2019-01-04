@@ -107,6 +107,11 @@ func TestOAuth2PostWebhookOk(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	_, errerr := ProcessWebhook(webHook, "")
+	if errerr != nil {
+		t.Error(errerr)
+	}
 }
 
 // nolint: dupl
