@@ -75,9 +75,10 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	var tempResults map[string]interface{}
 
 	// Check for an existing token and if you find a valid token that isn't expired use that and don't call the endpoint
-	if accessTokenMap == nil || accessTokenMap["token_type"] == nil ||
-		accessTokenMap["access_token"] == nil || accessTokenMap["expires_in"] == nil ||
-		accessTokenMap["expirationDate"] == nil || accessTokenMap["expirationDate"].(int64) > helper.UnixMilliNow() {
+	if accessTokenMap == nil || accessTokenMap["token_type"] == nil || accessTokenMap["token_type"] == "" ||
+		accessTokenMap["access_token"] == nil || accessTokenMap["access_token"] == "" ||
+		accessTokenMap["expires_in"] == nil || accessTokenMap["expires_in"] == "" ||
+		accessTokenMap["expirationDate"] == nil || accessTokenMap["expirationDate"].(int64) < helper.UnixMilliNow() {
 		log.Debug("Getting access token")
 
 		client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)
@@ -128,10 +129,11 @@ func getAccessToken(webhook Webhook, proxy string) error {
 			return decErr
 		}
 
-		if accessTokenMap["expires_in"] != nil {
-			accessTokenMap["expirationDate"] = helper.UnixMilliNow() + (accessTokenMap["expires_in"].(int64) * 1000)
-		}
 		accessTokenMap = tempResults
+		if accessTokenMap["expires_in"] != nil {
+			accessTokenMap["expirationDate"] = helper.UnixMilliNow() + int64(accessTokenMap["expires_in"].(float64)*1000)
+		}
+
 		//Return access token
 		mSuccess.Update(1)
 	}
