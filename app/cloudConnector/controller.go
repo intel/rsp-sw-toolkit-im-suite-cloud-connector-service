@@ -130,15 +130,15 @@ func getAccessToken(webhook Webhook, proxy string) error {
 
 		}
 
-		if decErr := json.NewDecoder(response.Body).Decode(&tempResults); decErr != nil {
+		if decErr := json.NewDecoder(response.Body).Decode(&accessTokenMap); decErr != nil {
 			mDecoderError.Update(1)
 			return decErr
 		}
 
-		accessTokenMap = tempResults
 		if accessTokenMap["expires_in"] != nil {
 			accessTokenMap["expirationDate"] = helper.UnixMilliNow() + int64(accessTokenMap["expires_in"].(float64)*1000)
 		}
+		accessTokens[webhook.Auth.Endpoint] = accessTokenMap
 
 		//Return access token
 		mSuccess.Update(1)
@@ -199,11 +199,16 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 
 	}
 
-	if accessTokenMap != nil &&
-		accessTokenMap["token_type"].(string) != "" &&
-		accessTokenMap["access_token"].(string) != "" {
-		request.Header.Set("Authorization", accessTokenMap["token_type"].(string)+" "+accessTokenMap["access_token"].(string))
+	var accessTokenMap map[string]interface{}
+	if accessTokens != nil && accessTokens[webhook.Auth.Endpoint] != nil {
+		if accessTokenMap != nil &&
+			accessTokenMap["token_type"].(string) != "" &&
+			accessTokenMap["access_token"].(string) != "" {
+			request.Header.Set("Authorization", accessTokens[webhook.Auth.Endpoint]["token_type"].(string)+" "+
+				accessTokens[webhook.Auth.Endpoint]["access_token"].(string))
+		}
 	}
+
 	if webhook.Header != nil {
 		request.Header = webhook.Header
 	}
