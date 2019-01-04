@@ -3,6 +3,6 @@
   "loggingLevel": "debug",
   "telemetryEndpoint": "",
   "telemetryDataStoreName": "",
-  "httpsProxyURL": "http://proxy-us.intel.com:912",
+  "httpsProxyURL": "",
   "port": "8089"
 }

@@ -35,63 +35,46 @@ import (
 )
 
 const (
-	oauth2            = "oauth2"
-	jsonApplication   = "application/json;charset=utf-8"
-	oAuthConnectionTimeout = 15
+	oauth2                   = "oauth2"
+	jsonApplication          = "application/json;charset=utf-8"
+	oAuthConnectionTimeout   = 15
 	webhookConnectionTimeout = 60
-	responseMaxSize   = 16 << 20
+	responseMaxSize          = 16 << 20
 )
 
 // ProcessWebhook processes webhook requests
-func ProcessWebhook(webh Webhook, proxy string) error {
-	var postErr error
+func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 
-	log.Debugf("Webhook authType is: %s\n", webh.Auth.AuthType)
+	log.Debugf("Webhook authType is: %s\n", webhook.Auth.AuthType)
 
-	// Check authentication type and run the appropriate post
-	switch strings.ToLower(webh.Auth.AuthType) {
+	// Check authentication type and run the appropriate POST or GET request.
+	switch strings.ToLower(webhook.Auth.AuthType) {
 	case oauth2:
-		postErr = postOAuth2Webhook(webh, proxy)
-	default:
-		postErr = postWebhook(webh, proxy)
-	}
+		return getOrPostOAuth2Webhook(webhook, proxy)
 
-	return postErr
+	default:
+		return getOrPostWebhook(webhook, proxy)
+	}
 }
 
-// postOAuth2Webhook post to webhook using oauth 2 authentication
-func postOAuth2Webhook(webhook Webhook, proxy string) error {
+// getAccessToken posts to get access token.
+func getAccessToken(webhook Webhook, proxy string) (map[string]interface{}, error) {
 	// Metrics
-	metrics.GetOrRegisterGauge(`CloudConnector.postOAuthWebhook.Attempt`, nil).Update(1)
-	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postOAuthWebhook.Success`, nil)
-	mAuthenticateError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Auth-Error", nil)
-	mResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Status-Error", nil)
-	mDecoderError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Decoder-Error", nil)
-	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Marshal-Error", nil)
-	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postOAuthWebhook.Webhook-Error", nil)
-	mAuthenticateLatency := metrics.GetOrRegisterTimer(`CloudConnector.postOAuthWebhook.Authenticate-Latency`, nil)
-	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postOAuthWebhook.WebhookPost-Latency`, nil)
+	metrics.GetOrRegisterGauge(`CloudConnector.getAccessToken.Attempt`, nil).Update(1)
+	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.getAccessToken.Success`, nil)
+	mAuthenticateError := metrics.GetOrRegisterGauge("CloudConnector.getAccessToken.Auth-Error", nil)
+	mResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.getAccessToken.Status-Error", nil)
+	mDecoderError := metrics.GetOrRegisterGauge("CloudConnector.getAccessToken.Decoder-Error", nil)
+	mAuthenticateLatency := metrics.GetOrRegisterTimer(`CloudConnector.getAccessToken.Authenticate-Latency`, nil)
 
-	log.Debug("Posting with oauth 2 Authentication")
-
-	timeout := time.Duration(oAuthConnectionTimeout) * time.Second
-	client := &http.Client{
-		Timeout: timeout,
-	}
-	if proxy != "" {
-		proxyURL, parseErr := url.Parse(proxy)
-		if parseErr != nil {
-			log.Println(parseErr)
-		}
-		transport := http.Transport{
-			Proxy: http.ProxyURL(proxyURL),
-		}
-		client.Transport = &transport
-	}
+	log.Debugf("POST to endpoint %s\n with auth to get access token", webhook.Auth.Endpoint)
 
 	var tempResults map[string]interface{}
 
-	log.Debugf("Posting to Auth endpoint %s with auth data", webhook.Auth.Endpoint)
+	client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)
+	if httpClientErr != nil {
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
+	}
 
 	// Make the POST to authenticate
 	request, _ := http.NewRequest("POST", webhook.Auth.Endpoint, nil)
@@ -101,7 +84,7 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 	response, err := client.Do(request)
 	if err != nil {
 		mAuthenticateError.Update(1)
-		return errors.Wrapf(err, "unable post auth webhook: %s", webhook.URL)
+		return nil, errors.Wrapf(err, "unable post auth webhook: %s", webhook.URL)
 	}
 	mAuthenticateLatency.Update(time.Since(authenticateTimer))
 	defer func() {
@@ -122,139 +105,188 @@ func postOAuth2Webhook(webhook Webhook, proxy string) error {
 			if err == nil {
 				log.Errorf("Posting to Auth endpoint returned error status of: %d", response.StatusCode)
 
-				return errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d , Response %s",
+				return nil, errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d , Response %s",
 					response.StatusCode, string(body))
 			}
 		}
 
-		return errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d", response.StatusCode)
+		return nil, errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d", response.StatusCode)
 
 	}
 
 	if decErr := json.NewDecoder(response.Body).Decode(&tempResults); decErr != nil {
 		mDecoderError.Update(1)
-		return decErr
+		return nil, decErr
 	}
 
-	// Do post with access token
-	mData, err := json.Marshal(webhook.Payload)
-	if err != nil {
-		mMarshalError.Update(1)
-		log.Error("unable to marshal Auth response data")
-
-		return errors.Wrapf(err, "unable to marshal payload")
-	}
-	postTimer := time.Now()
-	if err := postWebhookAccessToken(mData, webhook.URL, tempResults["token_type"].(string), tempResults["access_token"].(string), client); err != nil {
-		mWebhookPostError.Update(1)
-		return err
-	}
-	mWebhookPostLatency.Update(time.Since(postTimer))
-
+	//Return access token
 	mSuccess.Update(1)
-	return nil
+	return tempResults, nil
 }
 
-func postWebhookAccessToken(data []byte, URL string, tokenType string, accessToken string, client *http.Client) error {
-	mPostResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postWebhookAccessToken.Status-Error", nil)
+func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) {
+	var mSuccess, mAuthenticateError, mResponseStatusError metrics.Gauge
+	var mAuthenticateLatency metrics.Timer
 
-	log.Debugf("Posting to endpoint %s\nwith auth", URL)
+	//Registering metrics based on HTTP method type.
+	if webhook.Method == http.MethodPost {
+		metrics.GetOrRegisterGauge(`CloudConnector.postOAuth2Webhook.Attempt`, nil).Update(1)
+		mSuccess = metrics.GetOrRegisterGauge(`CloudConnector.postOAuth2Webhook.Success`, nil)
+		mAuthenticateError = metrics.GetOrRegisterGauge("CloudConnector.postOAuth2Webhook.Auth-Error", nil)
+		mAuthenticateLatency = metrics.GetOrRegisterTimer(`CloudConnector.postOAuth2Webhook.Authenticate-Latency`, nil)
+		mResponseStatusError = metrics.GetOrRegisterGauge("CloudConnector.postOAuth2Webhook.Status-Error", nil)
+	} else {
+		metrics.GetOrRegisterGauge(`CloudConnector.getOAuth2Webhook.Attempt`, nil).Update(1)
+		mSuccess = metrics.GetOrRegisterGauge(`CloudConnector.getOAuth2Webhook.Success`, nil)
+		mAuthenticateError = metrics.GetOrRegisterGauge("CloudConnector.getOAuth2Webhook.Auth-Error", nil)
+		mAuthenticateLatency = metrics.GetOrRegisterTimer(`CloudConnector.getOAuth2Webhook.Authenticate-Latency`, nil)
+		mResponseStatusError = metrics.GetOrRegisterGauge("CloudConnector.getOAuth2Webhook.Status-Error", nil)
 
-	postRequest, _ := http.NewRequest("POST", URL, bytes.NewBuffer(data))
-	postRequest.Header.Set("content-type", jsonApplication)
-	postRequest.Header.Set("Authorization", tokenType+" "+accessToken)
-	postResponse, err := client.Do(postRequest)
+	}
+
+	log.Debugf("%s to endpoint %s with auth", webhook.Method, webhook.URL)
+
+	//Set timeout and proxy for http client if present/needed
+	client, httpClientErr := getHTTPClient(webhookConnectionTimeout, proxy)
+	if httpClientErr != nil {
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
+	}
+
+	//Get Access token for the endpoint
+	authenticateTimer := time.Now()
+	accessTokenMap, accessTokenErr := getAccessToken(webhook, proxy)
+	if accessTokenErr != nil {
+		mAuthenticateError.Update(1)
+		return nil, accessTokenErr
+	}
+	mAuthenticateLatency.Update(time.Since(authenticateTimer))
+
+	//Based on HTTP method type, set body and content type.
+	var request *http.Request
+	if webhook.Method == http.MethodPost {
+		mData, err := json.Marshal(webhook.Payload)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to marshal payload")
+		}
+		request, _ = http.NewRequest(webhook.Method, webhook.URL, bytes.NewBuffer(mData))
+		request.Header.Set("content-type", jsonApplication)
+	} else {
+		request, _ = http.NewRequest(webhook.Method, webhook.URL, nil)
+
+	}
+	request.Header.Set("Authorization", accessTokenMap["token_type"].(string)+" "+accessTokenMap["access_token"].(string))
+	if webhook.Header != nil {
+		request.Header = webhook.Header
+	}
+
+	response, err := client.Do(request)
 	if err != nil {
-		return errors.Wrapf(err, "unable to post notification: %s", URL)
+		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.URL)
 	}
 	defer func() {
-		if closeErr := postResponse.Body.Close(); closeErr != nil {
+		if closeErr := response.Body.Close(); closeErr != nil {
 			log.WithFields(log.Fields{
-				"Method": "postOAuth2Webhook",
-				"Action": "process the oath webhook request",
+				"Method": "getOrPostOAuth2Webhook",
+				"Action": "process the OAuth webhook request",
 			}).Fatal(err.Error())
 		}
 	}()
 
-	if postResponse.StatusCode != http.StatusOK && postResponse.StatusCode != http.StatusNoContent {
-		mPostResponseStatusError.Update(int64(postResponse.StatusCode))
-		bodySize, errBoolResponseBody := checkBodySize(postResponse)
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
+		mResponseStatusError.Update(int64(response.StatusCode))
+		bodySize, errBoolResponseBody := checkBodySize(response)
 		if !errBoolResponseBody {
 			body := make([]byte, bodySize)
-			_, err = io.ReadFull(postResponse.Body, body)
+			_, err = io.ReadFull(response.Body, body)
 			if err == nil {
-				return errors.Wrapf(errors.New("request error"), "StatusCode %d , Response %s",
-					postResponse.StatusCode, string(body))
+				return nil, errors.Wrapf(errors.New("request error"), "StatusCode %d , Response %s",
+					response.StatusCode, string(body))
 			}
 		}
-		return errors.Wrapf(errors.New("request error"), "StatusCode %d ", postResponse.StatusCode)
+		return nil, errors.Wrapf(errors.New("request error"), "StatusCode %d ", response.StatusCode)
 	}
 
-	return nil
+	mSuccess.Update(1)
+	return response.Body, nil
 }
 
-// postWebhook post to webhook
-func postWebhook(webh Webhook, proxy string) error {
-	metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Attempt`, nil).Update(1)
-	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Success`, nil)
-	mMarshalError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Marshal-Error", nil)
-	mWebhookPostError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Error", nil)
-	mWebhookPostResponseStatusError := metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Status-Error", nil)
-	mWebhookPostLatency := metrics.GetOrRegisterTimer(`CloudConnector.postWebhook.mWebhookPost-Latency`, nil)
+func getOrPostWebhook(webhook Webhook, proxy string) (interface{}, error) {
 
-	if webh.Auth.AuthType != "" {
-		log.Debugf("Posting with %s Authentication\n", webh.Auth.AuthType)
+	var mSuccess, mWebhookResponseStatusError, mMarshalError metrics.Gauge
+	var mWebhookLatency metrics.Timer
+
+	//Registering metrics based on HTTP method type.
+	if webhook.Method == http.MethodPost {
+		metrics.GetOrRegisterGauge(`CloudConnector.getWebhook.Attempt`, nil).Update(1)
+		mSuccess = metrics.GetOrRegisterGauge(`CloudConnector.getWebhook.Success`, nil)
+		mWebhookResponseStatusError = metrics.GetOrRegisterGauge("CloudConnector.getWebhook.Status-Error", nil)
+		mWebhookLatency = metrics.GetOrRegisterTimer(`CloudConnector.getWebhook.mWebhookPost-Latency`, nil)
 	} else {
-		log.Debug("Posting without Authentication\n")
+		metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Attempt`, nil).Update(1)
+		mSuccess = metrics.GetOrRegisterGauge(`CloudConnector.postWebhook.Success`, nil)
+		mMarshalError = metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Marshal-Error", nil)
+		mWebhookResponseStatusError = metrics.GetOrRegisterGauge("CloudConnector.postWebhook.Webhook-Status-Error", nil)
+		mWebhookLatency = metrics.GetOrRegisterTimer(`CloudConnector.postWebhook.mWebhookPost-Latency`, nil)
+
 	}
 
-	timeout := time.Duration(webhookConnectionTimeout) * time.Second
-	client := &http.Client{
-		Timeout: timeout,
+	log.Debugf("%s to endpoint %s without auth", webhook.Method, webhook.URL)
+
+	//Set timeout and proxy for http client if present/needed
+	client, httpClientErr := getHTTPClient(webhookConnectionTimeout, proxy)
+	if httpClientErr != nil {
+		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
 	}
-	if proxy != "" {
-		proxyURL, parseErr := url.Parse(proxy)
-		if parseErr != nil {
-			log.Println(parseErr)
+
+	//Request creation based on HTTTP mehtod type and adding headers
+	var request *http.Request
+	if webhook.Method == http.MethodPost {
+		mData, err := json.Marshal(webhook.Payload)
+		if err != nil {
+			mMarshalError.Update(1)
+			return nil, errors.Wrapf(err, "unable to marshal payload")
 		}
-		transport := http.Transport{
-			Proxy: http.ProxyURL(proxyURL),
-		}
-		client.Transport = &transport
+		request, _ = http.NewRequest(webhook.Method, webhook.URL, bytes.NewBuffer(mData))
+		request.Header.Set("content-type", jsonApplication)
+	} else {
+		request, _ = http.NewRequest(webhook.Method, webhook.URL, nil)
 	}
 
-	mData, err := json.Marshal(webh.Payload)
-	if err != nil {
-		mMarshalError.Update(1)
-		return errors.Wrapf(err, "unable to marshal payload")
+	if webhook.Header != nil {
+		request.Header = webhook.Header
 	}
-	request, _ := http.NewRequest(webh.Method, webh.URL, bytes.NewBuffer(mData))
-	request.Header = webh.Header
 
-	postTimer := time.Now()
+	getTimer := time.Now()
 	response, err := client.Do(request)
 	if err != nil {
-		mWebhookPostError.Update(1)
-		return errors.Errorf("Error posting to Webhook: %s", err)
+		return nil, errors.Wrapf(err, "unable to %s endpoint: %s", webhook.Method, webhook.URL)
 	}
-
-	if response.StatusCode != http.StatusOK {
-		mWebhookPostResponseStatusError.Update(int64(response.StatusCode))
-		return errors.Errorf("Error posting to Webhook, response status returned is %d",response.StatusCode)
-	}
-
-	mWebhookPostLatency.Update(time.Since(postTimer))
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {
 			log.WithFields(log.Fields{
-				"Method": "postWebhook",
+				"Method": "getOrPostWebhook",
 				"Action": "process the webhook request",
 			}).Fatal(err.Error())
 		}
 	}()
 
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
+		mWebhookResponseStatusError.Update(int64(response.StatusCode))
+		bodySize, errBoolResponseBody := checkBodySize(response)
+		if !errBoolResponseBody {
+			body := make([]byte, bodySize)
+			_, err = io.ReadFull(response.Body, body)
+			if err == nil {
+				return nil, errors.Wrapf(errors.New("request error"), "StatusCode %d , Response %s",
+					response.StatusCode, string(body))
+			}
+		}
+		return nil, errors.Wrapf(errors.New("request error"), "StatusCode %d ", response.StatusCode)
+	}
+	mWebhookLatency.Update(time.Since(getTimer))
+
 	mSuccess.Update(1)
-	return nil
+	return response.Body, nil
 }
 
 func checkBodySize(response *http.Response) (int64, bool) {
@@ -265,4 +297,22 @@ func checkBodySize(response *http.Response) (int64, bool) {
 		return 0, false
 	}
 	return bodySize, true
+}
+
+func getHTTPClient(timeout time.Duration, proxy string) (*http.Client, error) {
+	timeOutSec := timeout * time.Second
+	client := &http.Client{
+		Timeout: timeOutSec,
+	}
+	if proxy != "" {
+		proxyURL, parseErr := url.Parse(proxy)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		transport := http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
+		client.Transport = &transport
+	}
+	return client, nil
 }

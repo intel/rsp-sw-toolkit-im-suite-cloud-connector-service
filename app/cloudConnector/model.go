@@ -109,7 +109,7 @@ const WebhookSchema = `
 							},
 							"method": {
 								"type": ["string", "null"],
-								"enum": ["POST", "GET", "PUT", "PATCH", "DELETE", null]
+								"enum": ["POST", "GET"]
 							},
 							"isasync": {
 								"type": "boolean"
