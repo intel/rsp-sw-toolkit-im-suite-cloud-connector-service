@@ -55,6 +55,7 @@ func TestMain(m *testing.M) {
 
 // nolint: dupl
 func TestOAuth2PostWebhookOk(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Println("hit server")
 		if request.Method != "POST" {
@@ -110,6 +111,7 @@ func TestOAuth2PostWebhookOk(t *testing.T) {
 
 // nolint: dupl
 func TestOAuth2GetWebhookOk(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		escapedPath := request.URL.EscapedPath()
 		if escapedPath == "/oauth" {
@@ -162,6 +164,7 @@ func TestOAuth2GetWebhookOk(t *testing.T) {
 }
 
 func TestOAuth2PostWebhookForbidden(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "POST" {
 			t.Errorf("Expected 'POST' request, received '%s", request.Method)
@@ -198,6 +201,7 @@ func TestOAuth2PostWebhookForbidden(t *testing.T) {
 
 // nolint: dupl
 func TestOAuth2PostWebhookFailNotification(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "POST" {
 			t.Errorf("Expected 'POST' request, received '%s", request.Method)
@@ -243,6 +247,7 @@ func TestOAuth2PostWebhookFailNotification(t *testing.T) {
 
 // nolint: dupl
 func TestOAuth2GetWebhookFailNotification(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		escapedPath := request.URL.EscapedPath()
 		if escapedPath == "/oauth" {
@@ -283,6 +288,7 @@ func TestOAuth2GetWebhookFailNotification(t *testing.T) {
 
 // nolint: dupl
 func TestPostWebhookNoAuthenticationOK(t *testing.T) {
+	accessTokenMap = nil
 	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "POST" {
 			t.Errorf("Expected 'POST' request, received '%s", request.Method)
@@ -324,6 +330,7 @@ func TestPostWebhookNoAuthenticationOK(t *testing.T) {
 }
 
 func TestGetWebhookNoAuthenticationOK(t *testing.T) {
+	accessTokenMap = nil
 	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "GET" {
 			t.Errorf("Expected 'GET' request, received '%s", request.Method)
@@ -365,6 +372,7 @@ func TestGetWebhookNoAuthenticationOK(t *testing.T) {
 }
 
 func TestPostWebhookNoAuthenticationForbidden(t *testing.T) {
+	accessTokenMap = nil
 	testJdaMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "POST" {
 			t.Errorf("Expected 'POST' request, received '%s", request.Method)
@@ -397,6 +405,7 @@ func TestPostWebhookNoAuthenticationForbidden(t *testing.T) {
 }
 
 func TestGetWebhookNoAuthenticationForbidden(t *testing.T) {
+	accessTokenMap = nil
 	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "GET" {
 			t.Errorf("Expected 'GET' request, received '%s", request.Method)
@@ -440,6 +449,7 @@ func TestGetWebhookNoAuthenticationForbidden(t *testing.T) {
 }
 
 func TestPostWebhookProxy(t *testing.T) {
+	accessTokenMap = nil
 	testURL := "testURL.com"
 	webHook := GenerateWebhook(testURL, false, http.MethodPost)
 	data := []byte(`{ }`)
@@ -454,6 +464,7 @@ func TestPostWebhookProxy(t *testing.T) {
 }
 
 func TestGetWebhookProxy(t *testing.T) {
+	accessTokenMap = nil
 	testURL := "testURL.com"
 	webHook := GenerateWebhook(testURL, false, http.MethodGet)
 	data := []byte(`{ }`)
@@ -468,6 +479,7 @@ func TestGetWebhookProxy(t *testing.T) {
 }
 
 func TestPostOAuth2WebhookProxy(t *testing.T) {
+	accessTokenMap = nil
 	testURL := "testURL.com"
 	webHook := GenerateWebhook(testURL, false, http.MethodPost)
 	data := []byte(`{ }`)
@@ -485,6 +497,7 @@ func TestPostOAuth2WebhookProxy(t *testing.T) {
 }
 
 func TestGetOAuth2WebhookProxy(t *testing.T) {
+	accessTokenMap = nil
 	testURL := "testURL.com"
 	webHook := GenerateWebhook(testURL, false, http.MethodPost)
 	data := []byte(`{ }`)

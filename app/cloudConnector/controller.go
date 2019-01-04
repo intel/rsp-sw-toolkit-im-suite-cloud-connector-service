@@ -32,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
+	"github.impcloud.net/Responsive-Retail-Core/utilities/helper"
 )
 
 const (
@@ -41,6 +42,8 @@ const (
 	webhookConnectionTimeout = 60
 	responseMaxSize          = 16 << 20
 )
+
+var accessTokenMap map[string]interface{}
 
 // ProcessWebhook processes webhook requests
 func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
@@ -58,7 +61,7 @@ func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 }
 
 // getAccessToken posts to get access token.
-func getAccessToken(webhook Webhook, proxy string) (map[string]interface{}, error) {
+func getAccessToken(webhook Webhook, proxy string) error {
 	// Metrics
 	metrics.GetOrRegisterGauge(`CloudConnector.getAccessToken.Attempt`, nil).Update(1)
 	mSuccess := metrics.GetOrRegisterGauge(`CloudConnector.getAccessToken.Success`, nil)
@@ -71,57 +74,70 @@ func getAccessToken(webhook Webhook, proxy string) (map[string]interface{}, erro
 
 	var tempResults map[string]interface{}
 
-	client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)
-	if httpClientErr != nil {
-		return nil, errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
-	}
+	// Check for an existing token and if you find a valid token that isn't expired use that and don't call the endpoint
+	if accessTokenMap == nil || accessTokenMap["token_type"] == nil ||
+		accessTokenMap["access_token"] == nil || accessTokenMap["expires_in"] == nil ||
+		accessTokenMap["expirationDate"] == nil || accessTokenMap["expirationDate"].(int64) > helper.UnixMilliNow() {
+		log.Debug("Getting access token")
 
-	// Make the POST to authenticate
-	request, _ := http.NewRequest("POST", webhook.Auth.Endpoint, nil)
-	request.Header.Set("Authorization", webhook.Auth.Data)
-
-	authenticateTimer := time.Now()
-	response, err := client.Do(request)
-	if err != nil {
-		mAuthenticateError.Update(1)
-		return nil, errors.Wrapf(err, "unable post auth webhook: %s", webhook.URL)
-	}
-	mAuthenticateLatency.Update(time.Since(authenticateTimer))
-	defer func() {
-		if closeErr := response.Body.Close(); closeErr != nil {
-			log.WithFields(log.Fields{
-				"Method": "postOAuth2Webhook",
-				"Action": "process the oath webhook request",
-			}).Fatal(err.Error())
+		client, httpClientErr := getHTTPClient(oAuthConnectionTimeout, proxy)
+		if httpClientErr != nil {
+			return errors.Wrapf(httpClientErr, "unable to %s webhook due to error in parsing proxy URL: %s", webhook.Method, proxy)
 		}
-	}()
 
-	if response.StatusCode != http.StatusOK {
-		mResponseStatusError.Update(int64(response.StatusCode))
-		bodySize, errBoolResponseBody := checkBodySize(response)
-		if !errBoolResponseBody {
-			body := make([]byte, bodySize)
-			_, err = io.ReadFull(response.Body, body)
-			if err == nil {
-				log.Errorf("Posting to Auth endpoint returned error status of: %d", response.StatusCode)
+		// Make the POST to authenticate
+		request, _ := http.NewRequest("POST", webhook.Auth.Endpoint, nil)
+		request.Header.Set("Authorization", webhook.Auth.Data)
 
-				return nil, errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d , Response %s",
-					response.StatusCode, string(body))
+		authenticateTimer := time.Now()
+		response, err := client.Do(request)
+		if err != nil {
+			mAuthenticateError.Update(1)
+			return errors.Wrapf(err, "unable post auth webhook: %s", webhook.URL)
+		}
+		mAuthenticateLatency.Update(time.Since(authenticateTimer))
+		defer func() {
+			if closeErr := response.Body.Close(); closeErr != nil {
+				log.WithFields(log.Fields{
+					"Method": "postOAuth2Webhook",
+					"Action": "process the oath webhook request",
+				}).Fatal(err.Error())
 			}
+		}()
+
+		if response.StatusCode != http.StatusOK {
+			mResponseStatusError.Update(int64(response.StatusCode))
+			bodySize, errBoolResponseBody := checkBodySize(response)
+			if !errBoolResponseBody {
+				body := make([]byte, bodySize)
+				_, err = io.ReadFull(response.Body, body)
+				if err == nil {
+					log.Errorf("Posting to Auth endpoint returned error status of: %d", response.StatusCode)
+
+					return errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d , Response %s",
+						response.StatusCode, string(body))
+				}
+			}
+
+			return errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d", response.StatusCode)
+
 		}
 
-		return nil, errors.Wrapf(errors.New("webhook authentication error: "+webhook.Auth.Endpoint), "StatusCode %d", response.StatusCode)
+		if decErr := json.NewDecoder(response.Body).Decode(&tempResults); decErr != nil {
+			mDecoderError.Update(1)
+			return decErr
+		}
 
+		if accessTokenMap["expires_in"] != nil {
+			accessTokenMap["expirationDate"] = helper.UnixMilliNow() + (accessTokenMap["expires_in"].(int64) * 1000)
+		}
+		accessTokenMap = tempResults
+		//Return access token
+		mSuccess.Update(1)
 	}
-
-	if decErr := json.NewDecoder(response.Body).Decode(&tempResults); decErr != nil {
-		mDecoderError.Update(1)
-		return nil, decErr
-	}
-
 	//Return access token
 	mSuccess.Update(1)
-	return tempResults, nil
+	return nil
 }
 
 func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) {
@@ -154,7 +170,7 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 
 	//Get Access token for the endpoint
 	authenticateTimer := time.Now()
-	accessTokenMap, accessTokenErr := getAccessToken(webhook, proxy)
+	accessTokenErr := getAccessToken(webhook, proxy)
 	if accessTokenErr != nil {
 		mAuthenticateError.Update(1)
 		return nil, accessTokenErr
@@ -174,7 +190,12 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 		request, _ = http.NewRequest(webhook.Method, webhook.URL, nil)
 
 	}
-	request.Header.Set("Authorization", accessTokenMap["token_type"].(string)+" "+accessTokenMap["access_token"].(string))
+
+	if accessTokenMap != nil &&
+		accessTokenMap["token_type"].(string) != "" &&
+		accessTokenMap["access_token"].(string) != "" {
+		request.Header.Set("Authorization", accessTokenMap["token_type"].(string)+" "+accessTokenMap["access_token"].(string))
+	}
 	if webhook.Header != nil {
 		request.Header = webhook.Header
 	}
