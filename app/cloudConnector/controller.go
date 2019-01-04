@@ -43,7 +43,7 @@ const (
 	responseMaxSize          = 16 << 20
 )
 
-var accessTokenMap map[string]interface{}
+var accessTokens map[string]map[string]interface{}
 
 // ProcessWebhook processes webhook requests
 func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
@@ -72,7 +72,12 @@ func getAccessToken(webhook Webhook, proxy string) error {
 
 	log.Debugf("POST to endpoint %s\n with auth to get access token", webhook.Auth.Endpoint)
 
-	var tempResults map[string]interface{}
+	var accessTokenMap map[string]interface{}
+	if accessTokens != nil && accessTokens[webhook.Auth.Endpoint] != nil {
+		accessTokenMap = accessTokens[webhook.Auth.Endpoint]
+	} else {
+		accessTokens = make(map[string]map[string]interface{})
+	}
 
 	// Check for an existing token and if you find a valid token that isn't expired use that and don't call the endpoint
 	if accessTokenMap == nil || accessTokenMap["token_type"] == nil || accessTokenMap["token_type"] == "" ||
