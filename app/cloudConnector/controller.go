@@ -42,6 +42,7 @@ const (
 	oAuthConnectionTimeout   = 15
 	webhookConnectionTimeout = 60
 	responseMaxSize          = 16 << 20
+	retryCount               = 5
 )
 
 var accessTokens sync.Map
@@ -54,7 +55,7 @@ func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 	// Check authentication type and run the appropriate POST or GET request.
 	switch strings.ToLower(webhook.Auth.AuthType) {
 	case oauth2:
-		return getOrPostOAuth2Webhook(webhook, proxy)
+		return getOrPostOAuth2Webhook(webhook, proxy, 0)
 
 	default:
 		return getOrPostWebhook(webhook, proxy)
@@ -148,7 +149,7 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	return nil
 }
 
-func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) {
+func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (interface{}, error) {
 	var mSuccess, mAuthenticateError, mResponseStatusError metrics.Gauge
 	var mAuthenticateLatency metrics.Timer
 
@@ -229,6 +230,13 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 	}()
 
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
+		if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+			if retrys < retryCount {
+				retrys++
+				getOrPostOAuth2Webhook(webhook, proxy, retrys)
+			}
+		}
+
 		mResponseStatusError.Update(int64(response.StatusCode))
 		bodySize, errBoolResponseBody := checkBodySize(response)
 		if !errBoolResponseBody {
