@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -43,7 +44,7 @@ const (
 	responseMaxSize          = 16 << 20
 )
 
-var accessTokens map[string]map[string]interface{}
+var accessTokens sync.Map
 
 // ProcessWebhook processes webhook requests
 func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
@@ -73,10 +74,9 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	log.Debugf("POST to endpoint %s\n with auth to get access token", webhook.Auth.Endpoint)
 
 	var accessTokenMap map[string]interface{}
-	if accessTokens != nil && accessTokens[webhook.Auth.Endpoint] != nil {
-		accessTokenMap = accessTokens[webhook.Auth.Endpoint]
-	} else {
-		accessTokens = make(map[string]map[string]interface{})
+	endPointCache, ok := accessTokens.Load(webhook.Auth.Endpoint)
+	if ok && endPointCache != nil {
+		accessTokenMap = endPointCache.(map[string]interface{})
 	}
 
 	// Check for an existing token and if you find a valid token that isn't expired use that and don't call the endpoint
@@ -138,7 +138,7 @@ func getAccessToken(webhook Webhook, proxy string) error {
 		if accessTokenMap["expires_in"] != nil {
 			accessTokenMap["expirationDate"] = helper.UnixMilliNow() + int64(accessTokenMap["expires_in"].(float64)*1000)
 		}
-		accessTokens[webhook.Auth.Endpoint] = accessTokenMap
+		accessTokens.Store(webhook.Auth.Endpoint, accessTokenMap)
 
 		//Return access token
 		mSuccess.Update(1)
@@ -200,12 +200,14 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (interface{}, error) 
 	}
 
 	var accessTokenMap map[string]interface{}
-	if accessTokens != nil && accessTokens[webhook.Auth.Endpoint] != nil {
+	endPointCache, ok := accessTokens.Load(webhook.Auth.Endpoint)
+	endPointCacheMap := endPointCache.(map[string]interface{})
+	if ok && endPointCache != nil {
 		if accessTokenMap != nil &&
 			accessTokenMap["token_type"].(string) != "" &&
 			accessTokenMap["access_token"].(string) != "" {
-			request.Header.Set("Authorization", accessTokens[webhook.Auth.Endpoint]["token_type"].(string)+" "+
-				accessTokens[webhook.Auth.Endpoint]["access_token"].(string))
+			request.Header.Set("Authorization", endPointCacheMap["token_type"].(string)+" "+
+				endPointCacheMap["access_token"].(string))
 		}
 	}
 
