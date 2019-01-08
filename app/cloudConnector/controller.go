@@ -53,13 +53,26 @@ func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 	log.Debugf("Webhook authType is: %s\n", webhook.Auth.AuthType)
 
 	// Check authentication type and run the appropriate POST or GET request.
-	switch strings.ToLower(webhook.Auth.AuthType) {
-	case oauth2:
-		return getOrPostOAuth2Webhook(webhook, proxy, 0)
+	var result interface{}
+	var err error
+	for retrys := 0; retrys <= retryCount; retrys++ {
+		switch strings.ToLower(webhook.Auth.AuthType) {
+		case oauth2:
+			result, err = getOrPostOAuth2Webhook(webhook, proxy, 0)
+			if err != nil {
+				break
+			}
+			return result, err
 
-	default:
-		return getOrPostWebhook(webhook, proxy)
+		default:
+			result, err = getOrPostWebhook(webhook, proxy)
+			if err != nil {
+				break
+			}
+			return result, err
+		}
 	}
+	return result, err
 }
 
 // getAccessToken posts to get access token.
@@ -200,13 +213,11 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (interfac
 
 	}
 
-	var accessTokenMap map[string]interface{}
 	endPointCache, ok := accessTokens.Load(webhook.Auth.Endpoint)
 	endPointCacheMap := endPointCache.(map[string]interface{})
-	if ok && endPointCache != nil {
-		if accessTokenMap != nil &&
-			accessTokenMap["token_type"].(string) != "" &&
-			accessTokenMap["access_token"].(string) != "" {
+	if ok && endPointCacheMap != nil {
+		if endPointCacheMap["token_type"].(string) != "" &&
+			endPointCacheMap["access_token"].(string) != "" {
 			request.Header.Set("Authorization", endPointCacheMap["token_type"].(string)+" "+
 				endPointCacheMap["access_token"].(string))
 		}
@@ -231,10 +242,7 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (interfac
 
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
 		if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
-			if retrys < retryCount {
-				retrys++
-				getOrPostOAuth2Webhook(webhook, proxy, retrys)
-			}
+			accessTokens.Delete(webhook.Auth.Endpoint)
 		}
 
 		mResponseStatusError.Update(int64(response.StatusCode))
