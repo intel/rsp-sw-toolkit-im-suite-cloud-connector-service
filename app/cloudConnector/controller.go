@@ -53,26 +53,27 @@ func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 	log.Debugf("Webhook authType is: %s\n", webhook.Auth.AuthType)
 
 	// Check authentication type and run the appropriate POST or GET request.
-	var result interface{}
-	var err error
-	for retrys := 0; retrys <= retryCount; retrys++ {
-		switch strings.ToLower(webhook.Auth.AuthType) {
-		case oauth2:
-			result, err = getOrPostOAuth2Webhook(webhook, proxy, 0)
-			if err != nil {
-				break
-			}
-			return result, err
-
-		default:
-			result, err = getOrPostWebhook(webhook, proxy)
-			if err != nil {
-				break
-			}
-			return result, err
+	switch strings.ToLower(webhook.Auth.AuthType) {
+	case oauth2:
+		// Call endpoint using authentication stored in the accessTokens map or using a newly retrieved token
+		response, err := getOrPostOAuth2Webhook(webhook, proxy, 0)
+		// If the call fails and the status code returned is auth related then we need to try again
+		// It's possible the cached token timed out so we should attempt to get a new token before failing
+		if response != nil && err != nil && (response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden) {
+			response, err = getOrPostOAuth2Webhook(webhook, proxy, 0)
 		}
+
+		// If there is a nil response then return nil otherwise we want to extract the response body and return it
+		var responseBody io.ReadCloser
+		if response != nil {
+			responseBody = response.Body
+		}
+
+		return responseBody, err
+
+	default:
+		return getOrPostWebhook(webhook, proxy)
 	}
-	return result, err
 }
 
 // getAccessToken posts to get access token.
@@ -162,7 +163,7 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	return nil
 }
 
-func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (interface{}, error) {
+func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (*http.Response, error) {
 	var mSuccess, mAuthenticateError, mResponseStatusError metrics.Gauge
 	var mAuthenticateLatency metrics.Timer
 
@@ -255,11 +256,11 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (interfac
 					response.StatusCode, string(body))
 			}
 		}
-		return nil, errors.Wrapf(errors.New("request error"), "StatusCode %d ", response.StatusCode)
+		return response, errors.Wrapf(errors.New("request error"), "StatusCode %d ", response.StatusCode)
 	}
 
 	mSuccess.Update(1)
-	return response.Body, nil
+	return response, nil
 }
 
 func getOrPostWebhook(webhook Webhook, proxy string) (interface{}, error) {
