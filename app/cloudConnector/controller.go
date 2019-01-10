@@ -42,7 +42,6 @@ const (
 	oAuthConnectionTimeout   = 15
 	webhookConnectionTimeout = 60
 	responseMaxSize          = 16 << 20
-	retryCount               = 1
 )
 
 var accessTokens sync.Map
