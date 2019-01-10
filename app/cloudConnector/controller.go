@@ -55,11 +55,11 @@ func ProcessWebhook(webhook Webhook, proxy string) (interface{}, error) {
 	switch strings.ToLower(webhook.Auth.AuthType) {
 	case oauth2:
 		// Call endpoint using authentication stored in the accessTokens map or using a newly retrieved token
-		response, err := getOrPostOAuth2Webhook(webhook, proxy, 0)
+		response, err := getOrPostOAuth2Webhook(webhook, proxy)
 		// If the call fails and the status code returned is auth related then we need to try again
 		// It's possible the cached token timed out so we should attempt to get a new token before failing
 		if response != nil && err != nil && (response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden) {
-			response, err = getOrPostOAuth2Webhook(webhook, proxy, 0)
+			response, err = getOrPostOAuth2Webhook(webhook, proxy)
 		}
 
 		// If there is a nil response then return nil otherwise we want to extract the response body and return it
@@ -162,7 +162,7 @@ func getAccessToken(webhook Webhook, proxy string) error {
 	return nil
 }
 
-func getOrPostOAuth2Webhook(webhook Webhook, proxy string, retrys int) (*http.Response, error) {
+func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (*http.Response, error) {
 	var mSuccess, mAuthenticateError, mResponseStatusError metrics.Gauge
 	var mAuthenticateLatency metrics.Timer
 
