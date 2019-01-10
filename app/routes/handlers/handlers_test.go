@@ -29,6 +29,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
 	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/web"
@@ -386,4 +390,49 @@ func testHandlerHelper(input []inputTest, handler web.Handler, t *testing.T) {
 			t.Errorf("Status code didn't match, status code received: %d", recorder.Code)
 		}
 	}
+}
+
+func TestS3FileDoesntExist(t *testing.T) {
+	region := "us-west-2"
+	var logLevel aws.LogLevelType = 1
+
+	awsConfig := aws.Config{
+		Region:      &region,
+		Credentials: credentials.NewStaticCredentials("AccessKeyID", "SecretAccessKey", ""),
+		LogLevel:    &logLevel,
+	}
+
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: awsConfig,
+	})
+
+	if err != nil {
+		t.Errorf("Failed to create the session %v", err)
+	}
+
+	newClient := s3.New(sess, &awsConfig)
+	exists := s3FileExists(newClient, "bucket", "file")
+
+	if exists {
+		t.Error("File was found when it should not exist")
+	}
+}
+
+func TestAwsCloudCallValidJsonInputWithFailure(t *testing.T) {
+	var validJSONSample = []inputTest{
+		{
+			// extra characters in json
+			input: []byte(`{
+				"accesskeyid": "keyid",
+				"secretaccesskey": "key",
+				"bucket": "bucket",
+				"region" : "us-west-2",
+				"payload" : "data"
+			}`),
+			code: 400,
+		},
+	}
+	cloudConnector := CloudConnector{}
+	handler := web.Handler(cloudConnector.AwsCloud)
+	testHandlerHelper(validJSONSample, handler, t)
 }
