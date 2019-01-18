@@ -232,9 +232,9 @@ func getOrPostOAuth2Webhook(webhook Webhook, proxy string) (*WebhookResponse, er
 
 		mResponseStatusError.Update(int64(response.StatusCode))
 
-		webhookResponse, err := getWebhookResponse(response)
-		if err != nil {
-			return nil, err
+		webhookResponse, responseErr := getWebhookResponse(response)
+		if responseErr != nil {
+			return nil, responseErr
 		}
 		return nil, errors.Wrapf(errors.New("request error:"), "StatusCode %d with following response %s",
 			webhookResponse.StatusCode, string(webhookResponse.Body))
@@ -312,9 +312,9 @@ func getOrPostWebhook(webhook Webhook, proxy string) (*WebhookResponse, error) {
 
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
 		mWebhookResponseStatusError.Update(int64(response.StatusCode))
-		webhookResponse, err := getWebhookResponse(response)
-		if err != nil {
-			return nil, err
+		webhookResponse, responseErr := getWebhookResponse(response)
+		if responseErr != nil {
+			return nil, responseErr
 		}
 		return nil, errors.Wrapf(errors.New("request error:"), "StatusCode %d with following response %s",
 			webhookResponse.StatusCode, string(webhookResponse.Body))
