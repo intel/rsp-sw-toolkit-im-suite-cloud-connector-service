@@ -61,8 +61,7 @@ func InitConfig(configChangedCallback func([]configuration.ChangeDetails)) error
 	}
 	AppConfig.TelemetryEndpoint, err = config.GetString("telemetryEndpoint")
 	if err != nil {
-		// since telemetryEndpoint is optional, it's ok to get an error on it
-		err = nil
+		return errors.Wrapf(err, "Unable to load config variables: %s", err.Error())
 	}
 
 	AppConfig.TelemetryDataStoreName, err = config.GetString("telemetryDataStoreName")

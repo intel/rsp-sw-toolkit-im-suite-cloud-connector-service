@@ -30,6 +30,12 @@ type AwsConnectionData struct {
 	Payload         interface{} `json:"payload" valid:"optional"`
 }
 
+type WebhookResponse struct {
+	Body       []byte
+	StatusCode int
+	Header     http.Header
+}
+
 // Webhook contains webhook address, headers, method, authentication method, and payload
 type Webhook struct {
 	Header  http.Header `json:"header" valid:"optional"`

@@ -105,6 +105,7 @@ func TestCallWebhook(t *testing.T) {
 
 func TestCallWebhookwithGetRequest(t *testing.T) {
 
+	mockResponse := "success"
 	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "GET" {
 			t.Errorf("Expected 'GET' request, received '%s", request.Method)
@@ -112,7 +113,7 @@ func TestCallWebhookwithGetRequest(t *testing.T) {
 
 		escapedPath := request.URL.EscapedPath()
 		if escapedPath == "/callwebhook" {
-			jsonData, _ := json.Marshal("success")
+			jsonData, _ := json.Marshal(mockResponse)
 			writer.Header().Set("Content-Type", "application/json")
 			_, _ = writer.Write(jsonData)
 		} else {
@@ -149,9 +150,8 @@ func TestCallWebhookwithGetRequest(t *testing.T) {
 	}
 	response := recorder.Result()
 	body, _ := ioutil.ReadAll(response.Body)
-	if len(body) < 0 {
+	if len(body) < 0 && string(body) == mockResponse {
 		t.Fatal("Get request is expected to have some response back")
-
 	}
 
 }
