@@ -75,11 +75,11 @@ func NewRouter() *mux.Router {
 		//
 		//     URL - (required) The call back URL. Responsive Retail must be able to post data to this URL.
 		//
-		//	   Method - (required) The http method to be ran on the webhook
+		//	   Method - (required) The http method to be ran on the webhook(Allowed methods: GET or POST)
 		//
 		//	   Header - (optional) The header for the webhook
 		//
-		//	   IsAsync - (required) Whether the cloud call should be made sync or async.  To be notified of errors connecting to the cloud use IsAsync:true.
+		//	   IsAsync - (required) Whether the cloud call should be made sync or async. To be notified of errors connecting to the cloud use IsAsync:true.GET HTTP verb ignores IsAsync flag.
 		//
 		//     Auth - (optional) Authentication settings used
 		//       - AuthType - The Authentication method defined by the webhook (ex. OAuth2)
@@ -93,6 +93,7 @@ func NewRouter() *mux.Router {
 		//```
 		// {
 		// 	"url": "string",
+		//	"method": "string",
 		// 	"auth": {
 		// 	  "authtype": "string",
 		// 		"endpoint": "string",

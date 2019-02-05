@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -104,13 +105,13 @@ func TestCallWebhook(t *testing.T) {
 }
 
 func TestCallWebhookwithGetRequest(t *testing.T) {
-
+	// Define mockresponse for webhhook
+	var actualResponse cloudConnector.WebhookResponse
 	mockResponse := "success"
 	testMockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != "GET" {
 			t.Errorf("Expected 'GET' request, received '%s", request.Method)
 		}
-
 		escapedPath := request.URL.EscapedPath()
 		if escapedPath == "/callwebhook" {
 			jsonData, _ := json.Marshal(mockResponse)
@@ -150,8 +151,19 @@ func TestCallWebhookwithGetRequest(t *testing.T) {
 	}
 	response := recorder.Result()
 	body, _ := ioutil.ReadAll(response.Body)
-	if len(body) < 0 && string(body) == mockResponse {
+	if len(body) < 0 {
 		t.Fatal("Get request is expected to have some response back")
+	}
+
+	if err = json.Unmarshal(body, &actualResponse); err != nil {
+		t.Fatalf("Error in unmarshalling response body %s", err.Error())
+	}
+
+	responseString := string(actualResponse.Body)
+	//removing extra quotes in string
+	responseString = responseString[1 : len(responseString)-1]
+	if strings.Compare(mockResponse, responseString) != 0 {
+		t.Fatalf("Actual response and expected response differs %s %s", responseString, mockResponse)
 	}
 
 }
