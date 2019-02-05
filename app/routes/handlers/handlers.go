@@ -170,7 +170,7 @@ func cloudCall(ctx context.Context, writer http.ResponseWriter, webHookObj cloud
 		//If its not a async request, then set a response for GET request
 		if !webHookObj.IsAsync {
 			if response != nil {
-				Respond(ctx, writer, response, response.StatusCode)
+				web.Respond(ctx, writer, response, http.StatusOK)
 			} else {
 				web.Respond(ctx, writer, nil, http.StatusOK)
 			}
@@ -327,35 +327,6 @@ func s3BucketExists(s3Client *s3.S3, bucketName string) bool {
 		}
 	}
 	return false
-}
-
-// Respond to client without changing the content type and body of the response
-func Respond(ctx context.Context, writer http.ResponseWriter, response *cloudConnector.WebhookResponse, code int) {
-
-	// Just set the status code and we are done.
-	if code == http.StatusNoContent {
-		writer.WriteHeader(code)
-		return
-	}
-
-	tracerID := ctx.Value(web.KeyValues).(*web.ContextValues).TraceID
-
-	// Set the content type.
-	writer.Header().Set("Content-Type", response.Header.Get("Content-Type"))
-
-	// Write the status code to the response
-	writer.WriteHeader(code)
-
-	// Send the result back to the client.
-	_, err := writer.Write(response.Body)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Method":   "web.response",
-			"Action":   "Write",
-			"TracerId": tracerID,
-			"Error":    err.Error(),
-		}).Error("Error Writing JSON data")
-	}
 }
 
 // Remove this linter comment once the unmarshal is used in another function

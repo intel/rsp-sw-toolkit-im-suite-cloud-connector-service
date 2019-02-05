@@ -19,7 +19,9 @@
 
 package cloudConnector
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // AwsConnectionData contains headers, and payload
 type AwsConnectionData struct {
@@ -31,9 +33,9 @@ type AwsConnectionData struct {
 }
 
 type WebhookResponse struct {
-	Body       []byte
-	StatusCode int
-	Header     http.Header
+	StatusCode int         `json:"statuscode"`
+	Header     http.Header `json:"header"`
+	Body       []byte      `json:"body" valid:"optional"`
 }
 
 // Webhook contains webhook address, headers, method, authentication method, and payload
