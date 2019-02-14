@@ -1,4 +1,4 @@
-FROM hub.docker.intel.com/rrp/rrp-scratch:latest
+FROM amr-registry.caas.intel.com/rrp/rrp-scratch:latest
 ADD cloud-connector-service /
 EXPOSE 8080
 HEALTHCHECK --interval=5s --timeout=3s CMD ["/cloud-connector-service","-isHealthy"]
