@@ -22,9 +22,11 @@ data/
 /cloud-connector-service
 
 #vendor stuff
-vendor/github.impcloud.net/Responsive-Retail-Core/**/*.md
-vendor/github.impcloud.net/Responsive-Retail-Core/**/vendor/*
-vendor/github.impcloud.net/Responsive-Retail-Core/**/Jenkinsfile
-vendor/github.impcloud.net/Responsive-Retail-Core/utilities/configuration/testData
-vendor/github.impcloud.net/Responsive-Retail-Core/utilities/configuration/configuration.json
-vendor/github.impcloud.net/Responsive-Retail-Core/utilities/ConsulApi/mockConsul.go
+vendor/github.impcloud.net/RSP-Inventory-Suite/**/*.md
+vendor/github.impcloud.net/RSP-Inventory-Suite/**/vendor/*
+vendor/github.impcloud.net/RSP-Inventory-Suite/**/Jenkinsfile
+vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/configuration/testData
+vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/configuration/configuration.json
+vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/ConsulApi/mockConsul.go
+
+go.sum

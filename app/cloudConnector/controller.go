@@ -31,8 +31,8 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
-	"github.impcloud.net/Responsive-Retail-Core/utilities/helper"
+	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
+	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 )
 
 const (

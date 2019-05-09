@@ -53,7 +53,7 @@
 package main
 
 import (
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
+	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
 )
 
 // swagger:parameters callwebhook

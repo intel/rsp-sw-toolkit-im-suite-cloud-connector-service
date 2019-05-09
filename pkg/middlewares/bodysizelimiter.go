@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/web"
+	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
 
 	log "github.com/sirupsen/logrus"
 )

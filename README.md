@@ -2,16 +2,6 @@
 
 See swagger documentation for service details at: [URL TBD]
 
-## Vendoring
-We use govendor to manage vendored packages and commit all the vendored packages.
-Do the following to add package from remote repository 
-```bash
-$ govendor fetch <package>
-```
-Do the following to update package from remote repository 
-```bash
-$ govendor sync <package>
-```
 ## Linting
 We use gometalinter.v2 for linting of code. The linter options are in a config file stored in the Go-Mongo-Docker-Build repository. You must clone this repository and pull latest prior to running the linter as follows:
 ```bash

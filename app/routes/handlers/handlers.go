@@ -32,12 +32,12 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/cloudConnector"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/app/config"
-	"github.impcloud.net/Responsive-Retail-Core/cloud-connector-service/pkg/web"
-	metrics "github.impcloud.net/Responsive-Retail-Core/utilities/go-metrics"
-	"github.impcloud.net/Responsive-Retail-Core/utilities/gojsonschema"
-	"github.impcloud.net/Responsive-Retail-Core/utilities/helper"
+	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
+	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
+	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
+	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
+	"github.impcloud.net/RSP-Inventory-Suite/utilities/gojsonschema"
+	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
