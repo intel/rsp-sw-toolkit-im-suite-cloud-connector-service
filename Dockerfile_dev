@@ -1,0 +1,36 @@
+FROM golang:1.12-alpine as gobuilder
+
+ENV GO111MODULE=on
+
+RUN echo http://nl.alpinelinux.org/alpine/v3.6/main > /etc/apk/repositories; \
+    echo http://nl.alpinelinux.org/alpine/v3.6/community >> /etc/apk/repositories
+
+RUN apk update && \
+    apk add --no-cache git bash ca-certificates
+
+WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite
+
+RUN mkdir cloud-connector-service
+
+ADD . cloud-connector-service/
+
+# Authentication needed to pull git modules from github.impcloud.net
+RUN git config --global credential.helper store
+ARG GIT_TOKEN
+RUN set +x && echo "https://$GIT_TOKEN:x-oauth-basic@github.impcloud.net" > ~/.git-credentials
+
+RUN  cd cloud-connector-service && ./build.sh
+
+FROM scratch
+
+COPY --from=gobuilder /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service /
+COPY --from=gobuilder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+EXPOSE 8080
+HEALTHCHECK --interval=5s --timeout=3s CMD ["/cloud-connector-service","-isHealthy"]
+
+ARG GIT_COMMIT=unspecified
+LABEL git_commit=$GIT_COMMIT
+
+ENTRYPOINT ["/cloud-connector-service"]
+
