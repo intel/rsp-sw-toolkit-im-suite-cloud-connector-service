@@ -8,18 +8,16 @@ RUN echo http://nl.alpinelinux.org/alpine/v3.6/main > /etc/apk/repositories; \
 RUN apk update && \
     apk add --no-cache git bash ca-certificates
 
-WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite
-
-RUN mkdir cloud-connector-service
-
-ADD . cloud-connector-service/
-
 # Authentication needed to pull git modules from github.impcloud.net
 RUN git config --global credential.helper store
 ARG GIT_TOKEN
 RUN set +x && echo "https://$GIT_TOKEN:x-oauth-basic@github.impcloud.net" > ~/.git-credentials
 
-RUN  cd cloud-connector-service && ./build.sh
+WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service
+
+COPY . .
+
+RUN ./build.sh
 
 FROM scratch
 
