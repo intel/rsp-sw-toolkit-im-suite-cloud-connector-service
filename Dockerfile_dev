@@ -5,8 +5,7 @@ ENV GO111MODULE=on
 RUN echo http://nl.alpinelinux.org/alpine/v3.6/main > /etc/apk/repositories; \
     echo http://nl.alpinelinux.org/alpine/v3.6/community >> /etc/apk/repositories
 
-RUN apk update && \
-    apk add --no-cache git bash ca-certificates
+RUN apk add --no-cache git bash ca-certificates
 
 # Authentication needed to pull git modules from github.impcloud.net
 RUN git config --global credential.helper store
@@ -15,13 +14,16 @@ RUN set +x && echo "https://$GIT_TOKEN:x-oauth-basic@github.impcloud.net" > ~/.g
 
 WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service
 
+COPY go.mod go.mod
+RUN go mod download
+
 COPY . .
 
 RUN ./build.sh
 
 FROM scratch
 
-COPY --from=gobuilder /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service /
+COPY --from=gobuilder /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/cloud-connector-service /
 COPY --from=gobuilder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 EXPOSE 8080
