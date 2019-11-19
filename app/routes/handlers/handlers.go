@@ -35,8 +35,8 @@ import (
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
+	"github.impcloud.net/RSP-Inventory-Suite/gojsonschema" 
 	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
-	"github.impcloud.net/RSP-Inventory-Suite/utilities/gojsonschema"
 	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 
 	"github.com/aws/aws-sdk-go/aws"
