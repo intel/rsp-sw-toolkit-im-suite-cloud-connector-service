@@ -12,6 +12,9 @@ RUN git config --global credential.helper store
 ARG GIT_TOKEN
 RUN set +x && echo "https://$GIT_TOKEN:x-oauth-basic@github.impcloud.net" > ~/.git-credentials
 
+# temporary folder for application to read/write files
+RUN mkdir -p /tmp /logs
+
 WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service
 
 COPY go.mod go.mod
@@ -23,9 +26,12 @@ RUN ./build.sh
 
 FROM scratch
 
-COPY --from=gobuilder /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/cloud-connector-service /
 COPY --from=gobuilder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=gobuilder --chown=2000:2000 /logs /logs
+COPY --from=gobuilder --chown=2000:2000 /tmp /tmp
+COPY --from=gobuilder --chown=2000:2000 /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/cloud-connector-service /
 
+USER 2000
 EXPOSE 8080
 HEALTHCHECK --interval=5s --timeout=3s CMD ["/cloud-connector-service","-isHealthy"]
 
