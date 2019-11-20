@@ -19,3 +19,7 @@ cd cloud-connector-service
 sudo make build
 sudo make deploy
 ```
+
+### API Documention ###
+
+Go to [https://editor.swagger.io](https://editor.swagger.io) and import cloud-connector-service.yml file.

@@ -71,7 +71,7 @@ func NewRouter() *mux.Router {
 		//
 		// Send Notification
 		//
-		// This API call is used to request Responsive Retail to notify the enterprise system when specific events occur in the store. The notifications take place by a web callback, typically referred to as a web hook. A notification request must include the following information:
+		// This API call is used to notify the enterprise system when specific events occur in the store. The notifications take place by a web callback, typically referred to as a web hook. A notification request must include the following information:
 		//
 		//     URL - (required) The call back URL. Responsive Retail must be able to post data to this URL.
 		//
