@@ -30,12 +30,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	"github.com/intel/rsp-sw-toolkit-im-suite-gojsonschema"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
 	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
-	"github.impcloud.net/RSP-Inventory-Suite/gojsonschema" 
 	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
 	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 
