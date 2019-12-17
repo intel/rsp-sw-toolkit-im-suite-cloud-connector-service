@@ -21,9 +21,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/cloudConnector"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/config"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/pkg/web"
 )
 
 type inputTest struct {

@@ -17,14 +17,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/cloudConnector"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/config"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/pkg/web"
 	"github.com/intel/rsp-sw-toolkit-im-suite-gojsonschema"
+	metrics "github.com/intel/rsp-sw-toolkit-im-suite-utilities/go-metrics"
+	"github.com/intel/rsp-sw-toolkit-im-suite-utilities/helper"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
-	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
-	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
