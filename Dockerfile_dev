@@ -7,15 +7,10 @@ RUN echo http://nl.alpinelinux.org/alpine/v3.6/main > /etc/apk/repositories; \
 
 RUN apk add --no-cache git bash ca-certificates
 
-# Authentication needed to pull git modules from github.impcloud.net
-RUN git config --global credential.helper store
-ARG GIT_TOKEN
-RUN set +x && echo "https://$GIT_TOKEN:x-oauth-basic@github.impcloud.net" > ~/.git-credentials
-
 # temporary folder for application to read/write files
 RUN mkdir -p /tmp /logs
 
-WORKDIR $GOPATH/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service
+WORKDIR $GOPATH/src/github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service
 
 COPY go.mod go.mod
 RUN go mod download
@@ -29,7 +24,7 @@ FROM scratch
 COPY --from=gobuilder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=gobuilder --chown=2000:2000 /logs /logs
 COPY --from=gobuilder --chown=2000:2000 /tmp /tmp
-COPY --from=gobuilder --chown=2000:2000 /go/src/github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/cloud-connector-service /
+COPY --from=gobuilder --chown=2000:2000 /go/src/github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/cloud-connector-service /
 
 USER 2000
 EXPOSE 8080

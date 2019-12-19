@@ -22,12 +22,4 @@ debug.test
 data/
 /cloud-connector-service
 
-#vendor stuff
-vendor/github.impcloud.net/RSP-Inventory-Suite/**/*.md
-vendor/github.impcloud.net/RSP-Inventory-Suite/**/vendor/*
-vendor/github.impcloud.net/RSP-Inventory-Suite/**/Jenkinsfile
-vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/configuration/testData
-vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/configuration/configuration.json
-vendor/github.impcloud.net/RSP-Inventory-Suite/utilities/ConsulApi/mockConsul.go
-
 go.sum

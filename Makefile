@@ -7,7 +7,7 @@
 .PHONY: build deploy stop init
 
 MICROSERVICES=cloud-connector-service 
-			  
+
 BUILDABLE=$(MICROSERVICES)
 .PHONY: $(BUILDABLE)
 

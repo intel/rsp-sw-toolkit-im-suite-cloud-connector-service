@@ -11,5 +11,3 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.1
 )
-
-replace github.com/intel/rsp-sw-toolkit-im-suite-utilities => ../../utilities
