@@ -9,9 +9,9 @@ package routes
 import (
 	"github.com/gorilla/mux"
 
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/routes/handlers"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/middlewares"
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/pkg/web"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/routes/handlers"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/pkg/middlewares"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/pkg/web"
 )
 
 // Route struct holds attributes to declare routes

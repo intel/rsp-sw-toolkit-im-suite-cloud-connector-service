@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/intel/rsp-sw-toolkit-im-suite-utilities/go-metrics"
+	"github.com/intel/rsp-sw-toolkit-im-suite-utilities/helper"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	metrics "github.impcloud.net/RSP-Inventory-Suite/utilities/go-metrics"
-	"github.impcloud.net/RSP-Inventory-Suite/utilities/helper"
 )
 
 const (

@@ -141,11 +141,9 @@ definitions:
       endpoint:
         type: string
         x-go-name: Endpoint
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector
   CloudConnector:
     type: object
     title: CloudConnector represents the User API method handler set.
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/routes/handlers
   ErrReport:
     description: ErrReport is used to wrap schema validation errors int json object
     type: object
@@ -162,7 +160,6 @@ definitions:
       value:
         type: object
         x-go-name: Value
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/routes/handlers
   ErrorList:
     description: ErrorList provides a collection of errors for processing
     type: object
@@ -175,7 +172,6 @@ definitions:
         items:
           $ref: '#/definitions/ErrReport'
         x-go-name: Errors
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/routes/handlers
   Header:
     type: object
     title: A Header represents the key-value pairs in an HTTP header.
@@ -204,7 +200,6 @@ definitions:
       url:
         type: string
         x-go-name: URL
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/cloudConnector
   resultsResponse:
     description: 'Response wraps results, inlinecount, and extra fields in a json object'
     type: object
@@ -217,7 +212,6 @@ definitions:
         type: object
         x-go-name: Results
     x-go-name: Response
-    x-go-package: github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/routes/handlers
 responses:
   ErrReport:
     description: ErrorList provides a collection of errors for processing

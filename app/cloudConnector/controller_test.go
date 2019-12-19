@@ -17,7 +17,7 @@ import (
 
 	"strings"
 
-	"github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service/app/config"
+	"github.com/intel/rsp-sw-toolkit-im-suite-cloud-connector-service/app/config"
 )
 
 func GenerateWebhook(testServerURL string, auth bool, methodType string) Webhook {

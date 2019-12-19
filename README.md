@@ -13,11 +13,9 @@ sudo apt install -y docker.io build-essential
 
 ### Installation ###
 
+Clone this repo and run:
 ```
-git clone https://github.impcloud.net/RSP-Inventory-Suite/cloud-connector-service.git
-cd cloud-connector-service
-sudo make build
-sudo make deploy
+sudo make build deploy
 ```
 
 ### API Documentation ###
